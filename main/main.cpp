@@ -5,11 +5,18 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
+#include "esp_wifi.h"
+#include "esp_event.h"
+#include "nvs_flash.h"
+#include "esp_log.h"
 
 #include "esp_random.h"
 #include "MeshtasticCompact.hpp"
-
+#include "webserver.h"
 static const char* TAG = "DarkMesh";
+
+static const char* ssid = "DarkMesh";
+static const char* password = "1234Dark";
 
 extern "C" {
 void app_main();
@@ -30,6 +37,30 @@ LoraConfig lora_config = {
 MeshtasticCompact meshtasticCompact;
 
 void app_main(void) {
+    ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_netif_create_default_wifi_ap();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    wifi_config_t wifi_config = {};
+    strcpy((char*)wifi_config.ap.ssid, ssid);
+    wifi_config.ap.ssid_len = strlen(ssid);
+    strcpy((char*)wifi_config.ap.password, password);
+    wifi_config.ap.max_connection = 4;
+    wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
+    if (strlen(password) == 0) {
+        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+    }
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_LOGI(TAG, "WiFi AP initialized. SSID: %s, Password: %s", ssid, password);
+
+    init_httpd();
+
     ESP_LOGI(TAG, "Radio initializing...");
     meshtasticCompact.RadioInit(RadioType::SX1262, radio_pins, lora_config);
     ESP_LOGI(TAG, "Radio initialized.");

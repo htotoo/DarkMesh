@@ -5,3 +5,4 @@ sdkconfig
 sdkconfig.ci
 managed_components
 dependencies.lock
+sdkconfig.old

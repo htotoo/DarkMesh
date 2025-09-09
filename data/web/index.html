@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DarkMesh</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-color: #1e1e1e;
+            --text-color: #e0e0e0;
+            --primary-color: #00ff7f;
+            --border-color: #333;
+            --danger-color: #ff4136;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+
+        header {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+
+        header h1 {
+            color: var(--primary-color);
+            text-shadow: 0 0 5px var(--primary-color);
+        }
+
+        .panel {
+            background-color: var(--panel-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .panel.full-width {
+            grid-column: 1 / -1;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        button {
+            font-family: inherit;
+            background-color: var(--primary-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+            transition: all 0.2s ease;
+            margin-top: auto;
+        }
+
+        button:hover {
+            box-shadow: 0 0 10px var(--primary-color);
+        }
+
+        button#stop-attack-btn {
+            background-color: var(--danger-color);
+        }
+
+        button#stop-attack-btn:hover {
+            box-shadow: 0 0 10px var(--danger-color);
+        }
+
+        input,
+        textarea,
+        select {
+            font-family: inherit;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.5rem;
+            border-radius: 5px;
+            width: 100%;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .param-group {
+            display: none;
+            padding: 1rem;
+            border: 1px dashed var(--border-color);
+            border-radius: 5px;
+            margin-top: 0.5rem;
+        }
+
+        .param-group.active {
+            display: block;
+        }
+
+        .coord-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+        }
+
+        #status-value {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .table-wrapper {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            position: sticky;
+            top: 0;
+            background-color: var(--panel-color);
+        }
+
+        #debug-log {
+            background-color: #000;
+            height: 300px;
+            overflow-y: auto;
+            padding: 1rem;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>💀 DarkMesh 💀</h1>
+            <p>Meshtastic Pen-Testing Suite</p>
+        </header>
+
+        <div class="panel">
+            <h2>Radio Configuration</h2>
+
+            <label for="radio-freq">Frequency (MHz)</label>
+            <input type="number" id="radio-freq" value="868.0">
+
+            <label for="lora-preset-selector">LoRa Presets</label>
+            <select id="lora-preset-selector">
+                <option value="long_fast">LongFast (Default)</option>
+                <option value="long_slow">LongSlow</option>
+                <option value="very_long_slow">VeryLongSlow</option>
+                <option value="medium_slow">MediumSlow</option>
+                <option value="medium_fast">MediumFast</option>
+                <option value="short_slow">ShortSlow</option>
+                <option value="short_fast">ShortFast</option>
+                <option value="custom">Custom</option>
+            </select>
+
+            <div class="config-grid">
+                <div>
+                    <label for="lora-bw">Bandwidth</label>
+                    <input type="number" id="lora-bw" value="250.0" step="0.1">
+                </div>
+                <div>
+                    <label for="lora-sf">Spread Factor</label>
+                    <input type="number" id="lora-sf" value="11" min="7" max="12">
+                </div>
+                <div>
+                    <label for="lora-cr">Coding Rate</label>
+                    <input type="number" id="lora-cr" value="5" min="5" max="8">
+                </div>
+            </div>
+
+            <label for="radio-power">Output Power (dBm)</label>
+            <input type="number" id="radio-power" value="22" min="2" max="22">
+
+            <button id="apply-config-btn">Apply Configuration</button>
+        </div>
+
+        <div class="panel">
+            <h2>Continuous Attacks</h2>
+            <p>Status: <span id="status-value">Idle</span></p>
+
+            <select id="attack-selector">
+                <option value="none">-- Select Attack --</option>
+                <option value="node_flood">Flood with Nodes</option>
+                <option value="name_change">Namechange - Emoji</option>
+                <option value="pos_poison">Position Poison</option>
+                <option value="pki_poison">PKI Poison</option>
+                <option value="ddos">DDoS</option>
+            </select>
+
+            <div id="params-name_change" class="param-group">
+                <label for="emoji-input">Emoji to Append</label>
+                <input type="text" id="emoji-input" value="😈" maxlength="2">
+            </div>
+
+            <div id="params-pos_poison" class="param-group">
+                <div class="coord-grid">
+                    <div><label for="min-lat">Min Latitude</label><input type="number" id="min-lat" value="47.0"></div>
+                    <div><label for="max-lat">Max Latitude</label><input type="number" id="max-lat" value="48.0"></div>
+                    <div><label for="min-lon">Min Longitude</label><input type="number" id="min-lon" value="18.0"></div>
+                    <div><label for="max-lon">Max Longitude</label><input type="number" id="max-lon" value="20.0"></div>
+                </div>
+            </div>
+
+            <button id="start-attack-btn">Start Selected Attack</button>
+            <button id="stop-attack-btn">Stop Current Attack</button>
+        </div>
+
+        <div class="panel">
+            <h2>Send Message As (One-Time)</h2>
+            <label for="source-node-id">Source Node ID</label>
+            <input type="text" id="source-node-id" placeholder="e.g., !a1b2c3d4">
+
+            <label for="message-text">Message</label>
+            <textarea id="message-text" placeholder="Enter your message here..."></textarea>
+
+            <button id="send-message-btn">Send Message</button>
+        </div>
+
+        <div class="panel full-width">
+            <h2>Nodes Detected</h2>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Node ID</th>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Last Heard</th>
+                        </tr>
+                    </thead>
+                    <tbody id="node-list-body">
+                        <tr>
+                            <td colspan="4">Connecting to device...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel full-width">
+            <h2>Debug Console</h2>
+            <div id="debug-log"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Data ---
+            const loraPresets = {
+                'long_fast': { bw: 250.0, sf: 11, cr: 5 },
+                'long_slow': { bw: 125.0, sf: 12, cr: 5 },
+                'very_long_slow': { bw: 31.25, sf: 12, cr: 8 },
+                'medium_slow': { bw: 250.0, sf: 10, cr: 8 },
+                'medium_fast': { bw: 250.0, sf: 9, cr: 7 },
+                'short_slow': { bw: 250.0, sf: 8, cr: 7 },
+                'short_fast': { bw: 250.0, sf: 7, cr: 5 },
+            };
+
+            const statusValue = document.getElementById('status-value');
+            const nodeListBody = document.getElementById('node-list-body');
+            const debugLog = document.getElementById('debug-log');
+            const attackSelector = document.getElementById('attack-selector');
+            const startAttackBtn = document.getElementById('start-attack-btn');
+            const stopAttackBtn = document.getElementById('stop-attack-btn');
+            const sendMessageBtn = document.getElementById('send-message-btn');
+            const applyConfigBtn = document.getElementById('apply-config-btn');
+            const loraPresetSelector = document.getElementById('lora-preset-selector');
+            const loraBw = document.getElementById('lora-bw');
+            const loraSf = document.getElementById('lora-sf');
+            const loraCr = document.getElementById('lora-cr');
+            let socket;
+            function initWebSocket() {
+                console.log("Attempting to connect WebSocket...");
+                const gateway = `ws://${window.location.hostname}/ws`;
+                socket = new WebSocket(gateway);
+                socket.onopen = () => { logToDebug("🔗 Connected to DarkMesh ESP32."); };
+                socket.onclose = () => {
+                    logToDebug("⛔ Connection lost. Retrying in 3 seconds...");
+                    setTimeout(initWebSocket, 3000);
+                };
+                socket.onerror = (error) => { logToDebug(`❌ WebSocket Error: ${error}`); };
+                socket.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleWebSocketMessage(data);
+                    } catch (e) {
+                        logToDebug(`Received non-JSON message: ${event.data}`);
+                    }
+                };
+            }
+            function handleWebSocketMessage(data) {
+                switch (data.type) {
+                    case 'status_update':
+                        statusValue.textContent = data.current_attack || 'Idle';
+                        break;
+                    case 'node_update':
+                        updateNodeList(data.nodes);
+                        break;
+                    case 'debug':
+                        logToDebug(data.message);
+                        break;
+                    default:
+                        logToDebug(`Unknown message type: ${data.type}`);
+                }
+            }
+            function updateNodeList(nodes) {
+                nodeListBody.innerHTML = '';
+                if (nodes && nodes.length > 0) {
+                    nodes.forEach(node => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                    <td>${node.id || 'N/A'}</td>
+                    <td>${node.name || 'N/A'}</td>
+                    <td>${node.pos ? `${node.pos.lat}, ${node.pos.lon}` : 'N/A'}</td>
+                    <td>${node.last_heard || 'N/A'}</td>
+                `;
+                        nodeListBody.appendChild(row);
+                    });
+                } else {
+                    nodeListBody.innerHTML = '<tr><td colspan="4">No nodes detected yet...</td></tr>';
+                }
+            }
+            function logToDebug(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                debugLog.innerHTML += `[${timestamp}] ${message}\n`;
+                debugLog.scrollTop = debugLog.scrollHeight;
+            }
+            attackSelector.addEventListener('change', () => {
+                document.querySelectorAll('.param-group').forEach(group => group.classList.remove('active'));
+                const selectedAttack = attackSelector.value;
+                const paramGroup = document.getElementById(`params-${selectedAttack}`);
+                if (paramGroup) {
+                    paramGroup.classList.add('active');
+                }
+            });
+
+            loraPresetSelector.addEventListener('change', () => {
+                const preset = loraPresetSelector.value;
+                if (preset in loraPresets) {
+                    const values = loraPresets[preset];
+                    loraBw.value = values.bw;
+                    loraSf.value = values.sf;
+                    loraCr.value = values.cr;
+                }
+            });
+
+            [loraBw, loraSf, loraCr].forEach(input => {
+                input.addEventListener('input', () => {
+                    loraPresetSelector.value = 'custom';
+                });
+            });
+
+            function sendWebSocketMessage(data) {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify(data));
+                } else {
+                    logToDebug("❌ WebSocket not connected. Cannot send command.");
+                }
+            }
+
+            startAttackBtn.addEventListener('click', () => {
+                const attack = attackSelector.value;
+                if (attack === 'none') {
+                    alert('Please select an attack first.');
+                    return;
+                }
+                const command = { action: 'start_attack', attack_type: attack, params: {} };
+                if (attack === 'name_change') {
+                    command.params.emoji = document.getElementById('emoji-input').value;
+                } else if (attack === 'pos_poison') {
+                    command.params.min_lat = parseFloat(document.getElementById('min-lat').value);
+                    command.params.max_lat = parseFloat(document.getElementById('max-lat').value);
+                    command.params.min_lon = parseFloat(document.getElementById('min-lon').value);
+                    command.params.max_lon = parseFloat(document.getElementById('max-lon').value);
+                }
+                logToDebug(`▶️ Starting attack: ${attack}`);
+                sendWebSocketMessage(command);
+            });
+
+            stopAttackBtn.addEventListener('click', () => {
+                logToDebug("⏹️ Stopping current attack.");
+                sendWebSocketMessage({ action: 'stop_attack' });
+            });
+
+            sendMessageBtn.addEventListener('click', () => {
+                const sourceId = document.getElementById('source-node-id').value;
+                const message = document.getElementById('message-text').value;
+                if (!sourceId || !message) {
+                    alert('Source Node ID and message cannot be empty.');
+                    return;
+                }
+                logToDebug(`✉️ Sending message as ${sourceId}`);
+                sendWebSocketMessage({ action: 'send_message', source_id: sourceId, message: message });
+            });
+
+            applyConfigBtn.addEventListener('click', () => {
+                const config = {
+                    action: 'set_config',
+                    params: {
+                        frequency: parseFloat(document.getElementById('radio-freq').value),
+                        bandwidth: parseFloat(loraBw.value),
+                        spreading_factor: parseInt(loraSf.value),
+                        coding_rate: parseInt(loraCr.value),
+                        power: parseInt(document.getElementById('radio-power').value)
+                    }
+                };
+                logToDebug(`⚙️ Applying new radio configuration...`);
+                sendWebSocketMessage(config);
+            });
+            initWebSocket();
+        });
+    </script>
+</body>
+
+</html>

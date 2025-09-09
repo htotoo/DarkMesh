@@ -1,4 +1,5 @@
 dependencies:
   EspMeshtasticCompact:
     git: https://github.com/htotoo/EspMeshtasticCompact
-    
+  espressif/mdns: 1.*
+  

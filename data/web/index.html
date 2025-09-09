@@ -336,10 +336,10 @@
                 socket.onerror = (error) => { logToDebug(`❌ WebSocket Error: ${error}`); };
                 socket.onmessage = (event) => {
                     try {
-                        const data = JSON.parse(event.data);
+                        const data = JSON.parse(event.data.text());
                         handleWebSocketMessage(data);
                     } catch (e) {
-                        logToDebug(`Received non-JSON message: ${event.data}`);
+                        logToDebug(`Received non-JSON message: ${event.data.text()}`);
                     }
                 };
             }

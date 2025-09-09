@@ -19,30 +19,10 @@ static bool disable_esp_async = false;  // for example while in file transfer mo
 
 extern const char index_start[] asm("_binary_index_html_start");
 extern const char index_end[] asm("_binary_index_html_end");
-
-void handle_start_attack(const char* attack_type, JSON_Object* params) {
-    ESP_LOGI("WEB", "Handling 'start_attack': %s", attack_type);
-    if (strcmp(attack_type, "pos_poison") == 0 && params != NULL) {
-        double min_lat = json_object_get_number(params, "min_lat");
-        double max_lat = json_object_get_number(params, "max_lat");
-        // ... get other params
-        ESP_LOGI("WEB", "Position Poison Params: min_lat=%.2f, max_lat=%.2f", min_lat, max_lat);
-        // TODO: Your logic here
-    }
-}
-
-void handle_set_config(JSON_Object* params) {
-    ESP_LOGI("WEB", "Handling 'set_config'");
-    double frequency = json_object_get_number(params, "frequency");
-    double bandwidth = json_object_get_number(params, "bandwidth");
-    double sf = json_object_get_number(params, "spreading_factor");  // Numbers are doubles in parson
-    // ... get other params
-    ESP_LOGI("WEB", "Config: Freq=%.1f, BW=%.1f, SF=%.0f", frequency, bandwidth, sf);
-    // TODO: Your logic here
-}
-// ... other handlers
-void handle_stop_attack() { /* ... */ }
-void handle_send_message(const char* source_id, const char* message) { /* ... */ }
+void handle_start_attack(const char* attack_type, JSON_Object* params);
+void handle_stop_attack();
+void handle_send_message(const char* source_id, const char* message);
+void handle_set_config(JSON_Object* params);
 
 static int hex_to_int(char c) {
     if (c >= '0' && c <= '9') {

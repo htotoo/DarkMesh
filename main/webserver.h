@@ -23,6 +23,7 @@ void handle_start_attack(const char* attack_type, JSON_Object* params);
 void handle_stop_attack();
 void handle_send_message(const char* source_id, const char* message);
 void handle_set_config(JSON_Object* params);
+void handle_initme();
 
 static int hex_to_int(char c) {
     if (c >= '0' && c <= '9') {
@@ -153,6 +154,10 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
                 if (params) {
                     handle_set_config(params);
                 }
+            } else if (strcmp(action, "initme") == 0) {
+                handle_initme();
+            } else {
+                ESP_LOGE("WEB", "Unknown action: %s", action);
             }
         } else {
             ESP_LOGE("WEB", "Could not find 'action' in JSON.");

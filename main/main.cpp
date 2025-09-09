@@ -159,3 +159,23 @@ void handle_send_message(const char* source_id, const char* message) {
         ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
     }
 }
+
+void handle_initme() {
+    ESP_LOGI("WEB", "Handling 'initme'");
+    // sending all nodes to web
+    for (auto& nodeinfo : meshtasticCompact.nodeinfo_db) {
+        if (!nodeinfo.node_id) {
+            continue;
+        }
+        MC_Position pos;
+        meshtasticCompact.nodeinfo_db.getPosition(nodeinfo.node_id, pos);
+        std::string json = "{ \"type\": \"node_update\",  \"nodes\": [ { \"id\": \"" + std::string(nodeinfo.id) + "\",  \"name\": \"" + nodeinfo.short_name + "\", \"pos\": { \"lat\": " + std::to_string(pos.latitude_i) + ",  \"lon\": " + std::to_string(pos.longitude_i) + " } } ]}";
+        ws_sendall((uint8_t*)json.c_str(), json.length(), true);
+        vTaskDelay(pdMS_TO_TICKS(20));  // slight delay to avoid overwhelming the socket
+    }
+    // send current attack to web
+    std::string attack_json = "{ \"type\": \"status_update\", \"current_attack\": \"" + tmAttack.getCurrentAttackTypeString() + "\" }";
+    ws_sendall((uint8_t*)attack_json.c_str(), attack_json.length(), true);
+    vTaskDelay(pdMS_TO_TICKS(20));
+    // todo send radio config
+}

@@ -28,6 +28,17 @@ class TMAttack {
         min_lon = min_longitude;
         max_lon = max_longitude;
     }
+    std::string getCurrentAttackTypeString() const {
+        switch (current_attack) {
+            case AttackType::NONE:
+                return "None";
+            case AttackType::POS_POISON:
+                return "Position Poison";
+                // todo
+            default:
+                return "Unknown";
+        }
+    }
 
    private:
     MeshtasticCompact* meshtasticCompact = nullptr;

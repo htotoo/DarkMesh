@@ -334,12 +334,13 @@
                     setTimeout(initWebSocket, 3000);
                 };
                 socket.onerror = (error) => { logToDebug(`❌ WebSocket Error: ${error}`); };
-                socket.onmessage = (event) => {
+                socket.onmessage = async (event) => {
                     try {
-                        const data = JSON.parse(event.data.text());
+                        var str = await event.data.text();
+                        const data = JSON.parse(str);
                         handleWebSocketMessage(data);
                     } catch (e) {
-                        logToDebug(`Received non-JSON message: ${event.data.text()}`);
+                        logToDebug(`Received non-JSON message: ${str}`);
                     }
                 };
             }

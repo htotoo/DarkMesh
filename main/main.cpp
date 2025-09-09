@@ -122,7 +122,7 @@ void handle_set_config(JSON_Object* params) {
 void handle_stop_attack() {
     tmAttack.setAttackType(AttackType::NONE);
     ESP_LOGI("WEB", "Handling 'stop_attack'");
-    std::string wsmsg = "{\"type\":\"\"}";
+    std::string wsmsg = "{\"type\":\"status_update\"}";
     ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
 }
 

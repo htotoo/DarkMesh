@@ -9,8 +9,10 @@
 enum class AttackType {
     NONE,
     POS_POISON,
-    MSG_INJECT,
-    NODE_IMPERSONATE
+    NODE_FLOOD,
+    NAME_CHANGE,
+    PKI_POISON,
+    DDOS,
 };
 
 class TMAttack {
@@ -18,6 +20,11 @@ class TMAttack {
     void setRadio(MeshtasticCompact* radio) {
         meshtasticCompact = radio;
     }
+
+    void setTarget(uint32_t target) {
+        this->target = target;
+    }
+
     void setAttackType(AttackType type) {
         current_attack = type;
     }
@@ -33,21 +40,33 @@ class TMAttack {
             case AttackType::NONE:
                 return "None";
             case AttackType::POS_POISON:
-                return "Position Poison";
-                // todo
+                return "pos_poison";
+            case AttackType::NODE_FLOOD:
+                return "node_flood";
+            case AttackType::NAME_CHANGE:
+                return "name_change";
+            case AttackType::PKI_POISON:
+                return "pki_poison";
+            case AttackType::DDOS:
+                return "ddos";
             default:
                 return "Unknown";
         }
     }
 
+    uint32_t getRandomTarget();
+
    private:
+    void rndPos();
+
     MeshtasticCompact* meshtasticCompact = nullptr;
     std::string emoji = "😈";
     double min_lat = -90.0;
     double max_lat = 90.0;
     double min_lon = -180.0;
     double max_lon = 180.0;
-    uint32_t timer = 0;  // 0.1 second timer
+    uint32_t timer = 0;            // 0.1 second timer
+    uint32_t target = 0xffffffff;  // everybody or flood
     AttackType current_attack = AttackType::NONE;
 };
 #endif  // TMATTACK_HPP

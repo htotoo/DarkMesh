@@ -9,6 +9,7 @@
         :root {
             --bg-color: #121212;
             --panel-color: #1e1e1e;
+            --panel-color-alt: #242424;
             --text-color: #e0e0e0;
             --primary-color: #00ff7f;
             --border-color: #333;
@@ -118,6 +119,23 @@
             font-weight: bold;
         }
 
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .input-group input {
+            flex-grow: 1;
+        }
+
+        .btn-all {
+            padding: 0 1rem;
+            margin-top: 0;
+            background-color: var(--border-color);
+            color: var(--text-color);
+            font-weight: normal;
+        }
+
         .param-group {
             padding: 1rem;
             border: 1px dashed var(--border-color);
@@ -179,6 +197,15 @@
             border-bottom: 1px solid var(--border-color);
         }
 
+        #node-list-body tr:nth-child(even) {
+            background-color: var(--panel-color-alt);
+        }
+
+        #node-list-body tr td:first-child {
+            cursor: pointer;
+            color: var(--primary-color);
+        }
+
         th {
             position: sticky;
             top: 0;
@@ -208,7 +235,7 @@
         <div class="panel">
             <h2>Radio Configuration</h2>
             <label for="radio-freq">Frequency (MHz)</label>
-            <input type="number" id="radio-freq" value="869.25" step="0.001">
+            <input type="number" id="radio-freq" value="869.25" step="0.01">
             <label for="lora-preset-selector">LoRa Presets</label>
             <select id="lora-preset-selector">
                 <option value="long_fast">LongFast (Default)</option>
@@ -247,16 +274,35 @@
             <p class="note">Note: A Target Node ID of <code>!ffffffff</code> means the attack will cycle through all
                 seen nodes.</p>
 
+            <div id="params-node_flood" class="param-group">
+                <div class="coord-grid">
+                    <div><label for="flood-min-lat">Min Latitude</label><input type="number" id="flood-min-lat"
+                            value="47.0"></div>
+                    <div><label for="flood-max-lat">Max Latitude</label><input type="number" id="flood-max-lat"
+                            value="48.0"></div>
+                    <div><label for="flood-min-lon">Min Longitude</label><input type="number" id="flood-min-lon"
+                            value="18.0"></div>
+                    <div><label for="flood-max-lon">Max Longitude</label><input type="number" id="flood-max-lon"
+                            value="20.0"></div>
+                </div>
+            </div>
+
             <div id="params-name_change" class="param-group">
                 <label for="namechange-target-id">Target Node ID</label>
-                <input type="text" id="namechange-target-id" value="!ffffffff">
+                <div class="input-group">
+                    <input type="text" id="namechange-target-id" value="!ffffffff">
+                    <button type="button" class="btn-all">All</button>
+                </div>
                 <label for="emoji-input">Emoji to Append</label>
                 <input type="text" id="emoji-input" value="😈" maxlength="2">
             </div>
 
             <div id="params-pos_poison" class="param-group">
                 <label for="pospoison-target-id">Target Node ID</label>
-                <input type="text" id="pospoison-target-id" value="!ffffffff">
+                <div class="input-group">
+                    <input type="text" id="pospoison-target-id" value="!ffffffff">
+                    <button type="button" class="btn-all">All</button>
+                </div>
                 <div class="coord-grid">
                     <div><label for="min-lat">Min Latitude</label><input type="number" id="min-lat" value="47.0"></div>
                     <div><label for="max-lat">Max Latitude</label><input type="number" id="max-lat" value="48.0"></div>
@@ -267,7 +313,10 @@
 
             <div id="params-pki_poison" class="param-group">
                 <label for="pkipoison-target-id">Target Node ID</label>
-                <input type="text" id="pkipoison-target-id" value="!ffffffff">
+                <div class="input-group">
+                    <input type="text" id="pkipoison-target-id" value="!ffffffff">
+                    <button type="button" class="btn-all">All</button>
+                </div>
             </div>
 
             <button id="start-attack-btn">Start Selected Attack</button>
@@ -373,7 +422,12 @@
             function handleWebSocketMessage(data) {
                 switch (data.type) {
                     case 'status_update':
+                        const attackName = data.current_attack || 'none';
                         statusValue.textContent = data.current_attack || 'Idle';
+                        if (attackSelector.value !== attackName) {
+                            attackSelector.value = attackName;
+                            attackSelector.dispatchEvent(new Event('change'));
+                        }
                         break;
                     case 'node_update':
                         if (data.nodes && Array.isArray(data.nodes)) {
@@ -476,7 +530,12 @@
                 }
                 const command = { action: 'start_attack', attack_type: attack, params: {} };
 
-                if (attack === 'name_change') {
+                if (attack === 'node_flood') {
+                    command.params.min_lat = parseFloat(document.getElementById('flood-min-lat').value);
+                    command.params.max_lat = parseFloat(document.getElementById('flood-max-lat').value);
+                    command.params.min_lon = parseFloat(document.getElementById('flood-min-lon').value);
+                    command.params.max_lon = parseFloat(document.getElementById('flood-max-lon').value);
+                } else if (attack === 'name_change') {
                     command.params.target_id = document.getElementById('namechange-target-id').value;
                     command.params.emoji = document.getElementById('emoji-input').value;
                 } else if (attack === 'pos_poison') {
@@ -522,6 +581,28 @@
                 };
                 logToDebug(`⚙️ Applying new radio configuration...`);
                 sendWebSocketMessage(config);
+            });
+
+            nodeListBody.addEventListener('click', (e) => {
+                if (e.target.tagName === 'TD' && e.target.cellIndex === 0) {
+                    const nodeId = e.target.textContent;
+                    if (nodeId && nodeId !== 'N/A') {
+                        document.getElementById('namechange-target-id').value = nodeId;
+                        document.getElementById('pospoison-target-id').value = nodeId;
+                        document.getElementById('pkipoison-target-id').value = nodeId;
+                        document.getElementById('source-node-id').value = nodeId;
+                        logToDebug(`📋 Copied Node ID to all fields: ${nodeId}`);
+                    }
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('btn-all')) {
+                    const inputField = e.target.previousElementSibling;
+                    if (inputField && inputField.tagName === 'INPUT') {
+                        inputField.value = '!ffffffff';
+                    }
+                }
             });
 
             initWebSocket();

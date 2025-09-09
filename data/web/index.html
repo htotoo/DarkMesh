@@ -6,13 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DarkMesh</title>
     <style>
-        /* --- Basic Setup & Fonts --- */
         :root {
             --bg-color: #121212;
             --panel-color: #1e1e1e;
             --text-color: #e0e0e0;
             --primary-color: #00ff7f;
-            /* Hacker Green */
             --border-color: #333;
             --danger-color: #ff4136;
         }
@@ -30,7 +28,6 @@
             padding: 1rem;
         }
 
-        /* --- Layout --- */
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -41,7 +38,6 @@
 
         header {
             grid-column: 1 / -1;
-            /* Span all columns */
             text-align: center;
             margin-bottom: 1rem;
             border-bottom: 1px solid var(--border-color);
@@ -74,7 +70,6 @@
             margin-bottom: 0.5rem;
         }
 
-        /* --- UI Elements --- */
         button {
             font-family: inherit;
             background-color: var(--primary-color);
@@ -86,7 +81,6 @@
             border-radius: 5px;
             transition: all 0.2s ease;
             margin-top: auto;
-            /* Pushes buttons to the bottom of flex panels */
         }
 
         button:hover {
@@ -125,8 +119,6 @@
         }
 
         .param-group {
-            display: none;
-            /* Hidden by default */
             padding: 1rem;
             border: 1px dashed var(--border-color);
             border-radius: 5px;
@@ -138,7 +130,6 @@
 
         .param-group.active {
             display: flex;
-            /* Shown via JS */
         }
 
         .coord-grid {
@@ -153,7 +144,6 @@
             gap: 1rem;
         }
 
-        /* --- Status & Notes & Tables & Logs --- */
         #status-value {
             font-weight: bold;
             color: var(--primary-color);
@@ -218,7 +208,7 @@
         <div class="panel">
             <h2>Radio Configuration</h2>
             <label for="radio-freq">Frequency (MHz)</label>
-            <input type="number" id="radio-freq" value="868.0">
+            <input type="number" id="radio-freq" value="869.25" step="0.001">
             <label for="lora-preset-selector">LoRa Presets</label>
             <select id="lora-preset-selector">
                 <option value="long_fast">LongFast (Default)</option>
@@ -307,7 +297,7 @@
                     </thead>
                     <tbody id="node-list-body">
                         <tr>
-                            <td colspan="4">Connecting to device...</td>
+                            <td colspan="4">Waiting for nodes to show up...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -318,10 +308,13 @@
             <h2>Debug Console</h2>
             <div id="debug-log"></div>
         </div>
+
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const allNodes = new Map();
+
             const loraPresets = {
                 'long_fast': { bw: 250.0, sf: 11, cr: 5 },
                 'long_slow': { bw: 125.0, sf: 12, cr: 5 },
@@ -348,21 +341,26 @@
             let socket;
 
             function initWebSocket() {
-                console.log("Attempting to connect WebSocket...");
                 const gateway = `ws://${window.location.hostname}/ws`;
                 socket = new WebSocket(gateway);
-                socket.onopen = () => { logToDebug("🔗 Connected to DarkMesh ESP32."); };
+
+                socket.onopen = () => {
+                    logToDebug("🔗 Connected to DarkMesh ESP32.");
+                    sendWebSocketMessage({ action: 'initme' });
+                };
+
                 socket.onclose = () => {
                     logToDebug("⛔ Connection lost. Retrying in 3 seconds...");
                     setTimeout(initWebSocket, 3000);
                 };
-                socket.onerror = (error) => { logToDebug(`❌ WebSocket Error: ${error}`); };
 
-                // CORRECTED based on your feedback
+                socket.onerror = (error) => {
+                    logToDebug(`❌ WebSocket Error`);
+                };
+
                 socket.onmessage = async (event) => {
                     let str = "";
                     try {
-                        // event.data can be a string or a Blob. .text() handles both.
                         str = await event.data.text();
                         const data = JSON.parse(str);
                         handleWebSocketMessage(data);
@@ -378,7 +376,15 @@
                         statusValue.textContent = data.current_attack || 'Idle';
                         break;
                     case 'node_update':
-                        updateNodeList(data.nodes);
+                        if (data.nodes && Array.isArray(data.nodes)) {
+                            data.nodes.forEach(node => {
+                                if (node.id) {
+                                    node.js_last_seen = Date.now();
+                                    allNodes.set(node.id, node);
+                                }
+                            });
+                            updateNodeList();
+                        }
                         break;
                     case 'debug':
                         logToDebug(data.message);
@@ -388,21 +394,38 @@
                 }
             }
 
-            function updateNodeList(nodes) {
+            function timeAgo(timestamp) {
+                const now = Date.now();
+                const seconds = Math.floor((now - timestamp) / 1000);
+                if (seconds < 10) return "Just now";
+                if (seconds < 60) return `${seconds}s ago`;
+                const minutes = Math.floor(seconds / 60);
+                if (minutes < 60) return `${minutes}m ago`;
+                const hours = Math.floor(minutes / 60);
+                return `${hours}h ago`;
+            }
+
+            function updateNodeList() {
+                const nodesArray = Array.from(allNodes.values());
+                nodesArray.sort((a, b) => b.js_last_seen - a.js_last_seen);
                 nodeListBody.innerHTML = '';
-                if (nodes && nodes.length > 0) {
-                    nodes.forEach(node => {
+                if (nodesArray.length > 0) {
+                    nodesArray.forEach(node => {
                         const row = document.createElement('tr');
+                        const lat = node.pos ? node.pos.lat.toFixed(4) : 'N/A';
+                        const lon = node.pos ? node.pos.lon.toFixed(4) : 'N/A';
                         row.innerHTML = `
                     <td>${node.id || 'N/A'}</td>
                     <td>${node.name || 'N/A'}</td>
-                    <td>${node.pos ? `${node.pos.lat}, ${node.pos.lon}` : 'N/A'}</td>
-                    <td>${node.last_heard || 'N/A'}</td>
+                    <td>${node.pos ? `${lat}, ${lon}` : 'N/A'}</td>
+                    <td>${timeAgo(node.js_last_seen)}</td>
                 `;
                         nodeListBody.appendChild(row);
                     });
                 } else {
-                    nodeListBody.innerHTML = '<tr><td colspan="4">No nodes detected yet...</td></tr>';
+                    if (nodeListBody.innerHTML === '') {
+                        nodeListBody.innerHTML = '<tr><td colspan="4">Waiting for nodes to show up...</td></tr>';
+                    }
                 }
             }
 
@@ -502,6 +525,13 @@
             });
 
             initWebSocket();
+
+            setInterval(() => {
+                if (allNodes.size > 0) {
+                    updateNodeList();
+                }
+            }, 30000);
+
         });
     </script>
 

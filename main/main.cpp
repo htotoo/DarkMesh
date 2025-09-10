@@ -215,9 +215,11 @@ void handle_set_config(JSON_Object* params) {
     double frequency = json_object_get_number(params, "frequency");
     double bandwidth = json_object_get_number(params, "bandwidth");
     double sf = json_object_get_number(params, "spreading_factor");
+    double cr = json_object_get_number(params, "coding_rate");
+    double power = json_object_get_number(params, "power");
+    ESP_LOGI("WEB", "Config: Freq=%.1f, BW=%.1f, SF=%.0f, CR=%.0f, Power=%.0f", frequency, bandwidth, sf, cr, power);
 
-    ESP_LOGI("WEB", "Config: Freq=%.1f, BW=%.1f, SF=%.0f", frequency, bandwidth, sf);
-    // TODO:  logic here
+    // todo call lib
 }
 
 void handle_stop_attack() {

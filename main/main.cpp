@@ -141,9 +141,9 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
         ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
     }
     if (strcmp(attack_type, "node_flood") == 0 && params != NULL) {
-        const char* target_id = json_object_get_string(params, "target_id");
-        ESP_LOGI("WEB", "Node Flood Attack Params: target_id=%s", target_id);
-        tmAttack.setTarget(getNodeIdFromCh(target_id));
+        // const char* target_id = json_object_get_string(params, "target_id");
+        // ESP_LOGI("WEB", "Node Flood Attack Params: target_id=%s", target_id);
+        // tmAttack.setTarget(getNodeIdFromCh(target_id));
         double min_lat = json_object_get_number(params, "min_lat");
         double max_lat = json_object_get_number(params, "max_lat");
         double min_lon = json_object_get_number(params, "min_lon");

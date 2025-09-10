@@ -132,6 +132,8 @@ void TMAttack::atkRndNode() {
     MeshtasticCompactHelpers::NodeInfoBuilder(&nodeinfo, srcnode, none, none, esp_random() % 105);
     meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
     meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
+    meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
+    meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
 }
 
 void TMAttack::loop() {

@@ -160,6 +160,21 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
         tmAttack.setTarget(getNodeIdFromCh(target_id));
         tmAttack.setEmoji(emoji);
         tmAttack.setAttackType(AttackType::NAME_CHANGE);
+        std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"name_change\"}";
+        ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
+    }
+    if (strcmp(attack_type, "pki_poison") == 0 && params != NULL) {
+        const char* target_id = json_object_get_string(params, "target_id");
+        ESP_LOGI("WEB", "PKI Poison Attack Params: target_id=%s", target_id);
+        tmAttack.setTarget(getNodeIdFromCh(target_id));
+        tmAttack.setAttackType(AttackType::PKI_POISON);
+        std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"pki_poison\"}";
+        ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
+    }
+    if (strcmp(attack_type, "ddos") == 0) {
+        tmAttack.setAttackType(AttackType::DDOS);
+        std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"ddos\"}";
+        ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
     }
 }
 

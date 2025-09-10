@@ -65,6 +65,8 @@ class TMAttack {
     void atkRndPos();
     void atkRndNode();
     void atkNameChange();
+    void atkPkiPoison();
+    void atkDdos();
 
     MeshtasticCompact* meshtasticCompact = nullptr;
     std::string emoji = "😈";

@@ -133,12 +133,33 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
         double max_lon = json_object_get_number(params, "max_lon");
         const char* target_id = json_object_get_string(params, "target_id");
         ESP_LOGI("WEB", "Position Poisoning Attack Params: min_lat=%.6f, max_lat=%.6f, min_lon=%.6f, max_lon=%.6f", min_lat, max_lat, min_lon, max_lon);
-        tmAttack.setPosAttackParams(min_lat, max_lat, min_lon, max_lon);
+        tmAttack.setPosParams(min_lat, max_lat, min_lon, max_lon);
         tmAttack.setTarget(getNodeIdFromCh(target_id));
         tmAttack.setAttackType(AttackType::POS_POISON);
 
         std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"pos_poison\"}";
         ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
+    }
+    if (strcmp(attack_type, "node_flood") == 0 && params != NULL) {
+        const char* target_id = json_object_get_string(params, "target_id");
+        ESP_LOGI("WEB", "Node Flood Attack Params: target_id=%s", target_id);
+        tmAttack.setTarget(getNodeIdFromCh(target_id));
+        double min_lat = json_object_get_number(params, "min_lat");
+        double max_lat = json_object_get_number(params, "max_lat");
+        double min_lon = json_object_get_number(params, "min_lon");
+        double max_lon = json_object_get_number(params, "max_lon");
+        tmAttack.setPosParams(min_lat, max_lat, min_lon, max_lon);
+        tmAttack.setAttackType(AttackType::NODE_FLOOD);
+        std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"node_flood\"}";
+        ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
+    }
+    if (strcmp(attack_type, "name_change") == 0 && params != NULL) {
+        const char* target_id = json_object_get_string(params, "target_id");
+        const char* emoji = json_object_get_string(params, "emoji");
+        ESP_LOGI("WEB", "Name Change Attack Params: target_id=%s, emoji=%s", target_id, emoji);
+        tmAttack.setTarget(getNodeIdFromCh(target_id));
+        tmAttack.setEmoji(emoji);
+        tmAttack.setAttackType(AttackType::NAME_CHANGE);
     }
 }
 

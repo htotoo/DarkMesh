@@ -28,13 +28,18 @@ class TMAttack {
     void setAttackType(AttackType type) {
         current_attack = type;
     }
+
+    void setEmoji(const std::string& emoji) {
+        this->emoji = emoji;
+    }
     void loop();
-    void setPosAttackParams(double min_latitude, double max_latitude, double min_longitude, double max_longitude) {
+    void setPosParams(double min_latitude, double max_latitude, double min_longitude, double max_longitude) {
         min_lat = min_latitude;
         max_lat = max_latitude;
         min_lon = min_longitude;
         max_lon = max_longitude;
     }
+
     std::string getCurrentAttackTypeString() const {
         switch (current_attack) {
             case AttackType::NONE:
@@ -57,7 +62,9 @@ class TMAttack {
     uint32_t getRandomTarget();
 
    private:
-    void rndPos();
+    void atkRndPos();
+    void atkRndNode();
+    void atkNameChange();
 
     MeshtasticCompact* meshtasticCompact = nullptr;
     std::string emoji = "😈";

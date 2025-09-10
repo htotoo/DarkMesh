@@ -58,7 +58,12 @@ void TMAttack::atkNameChange() {
     if (!node) {
         return;  // no valid target found
     }
+
     std::string new_name = node->long_name;
+    if (new_name.size() >= emoji.size() && new_name.compare(new_name.size() - emoji.size(), emoji.size(), emoji) == 0) {
+        return;  // it already got that part
+    }
+
     if (emoji.length() <= 0) {
         emoji = "😈";
     }

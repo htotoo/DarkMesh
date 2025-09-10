@@ -218,8 +218,13 @@ void handle_set_config(JSON_Object* params) {
     double cr = json_object_get_number(params, "coding_rate");
     double power = json_object_get_number(params, "power");
     ESP_LOGI("WEB", "Config: Freq=%.1f, BW=%.1f, SF=%.0f, CR=%.0f, Power=%.0f", frequency, bandwidth, sf, cr, power);
-
-    // todo call lib
+    meshtasticCompact.setRadioFrequency(frequency);
+    meshtasticCompact.setRadioBandwidth(bandwidth);
+    meshtasticCompact.setRadioSpreadingFactor(static_cast<uint8_t>(sf));
+    meshtasticCompact.setRadioCodingRate(static_cast<uint8_t>(cr));
+    meshtasticCompact.setRadioPower(static_cast<int8_t>(power));
+    std::string wsmsg = "{\"type\":\"debug\", \"message\":\"Radio configuration updated.\"}";
+    ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
 }
 
 void handle_stop_attack() {

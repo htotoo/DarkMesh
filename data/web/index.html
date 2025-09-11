@@ -444,7 +444,7 @@
                         if (data.nodes && Array.isArray(data.nodes)) {
                             data.nodes.forEach(node => {
                                 if (node.id) {
-                                    node.js_last_seen = Date.now();
+                                    node.js_last_seen = node.ls;
                                     allNodes.set(node.id, node);
                                 }
                             });
@@ -477,8 +477,8 @@
                 if (nodesArray.length > 0) {
                     nodesArray.forEach(node => {
                         const row = document.createElement('tr');
-                        const lat = node.pos ? node.pos.lat.toFixed(4) : 'N/A';
-                        const lon = node.pos ? node.pos.lon.toFixed(4) : 'N/A';
+                        const lat = node.pos ? (node.pos.lat / 1e7).toFixed(4) : 'N/A';
+                        const lon = node.pos ? (node.pos.lon / 1e7).toFixed(4) : 'N/A';
                         row.innerHTML = `
                     <td>${node.id || 'N/A'}</td>
                     <td>${node.name || 'N/A'}</td>

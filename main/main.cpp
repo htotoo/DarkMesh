@@ -82,8 +82,15 @@ void app_main(void) {
     meshtasticCompact.setSendEnabled(true);    // we want to send packets
     meshtasticCompact.setOnNodeInfoMessage([](MC_Header& header, MC_NodeInfo& nodeinfo, bool needReply) {
         MC_Position pos;
-        meshtasticCompact.nodeinfo_db.getPosition(nodeinfo.node_id, pos);
-        std::string json = "{ \"type\": \"node_update\",  \"nodes\": [ { \"id\": \"" + std::string(nodeinfo.id) + "\",  \"name\": \"" + nodeinfo.short_name + "\", \"pos\": { \"lat\": " + std::to_string(pos.latitude_i) + ",  \"lon\": " + std::to_string(pos.longitude_i) + " } } ]}";
+        if (!meshtasticCompact.nodeinfo_db.getPosition(nodeinfo.node_id, pos)) {
+            pos.latitude_i = 0;
+            pos.longitude_i = 0;
+        }
+        if (!pos.has_latitude_i || !pos.has_longitude_i) {
+            pos.latitude_i = 0;
+            pos.longitude_i = 0;
+        }
+        std::string json = "{ \"type\": \"node_update\",  \"nodes\": [ { \"id\": \"" + std::string(nodeinfo.id) + "\",  \"ls\": " + std::to_string(nodeinfo.last_updated) + " ,\"name\": \"" + nodeinfo.short_name + "\", \"pos\": { \"lat\": " + std::to_string(pos.latitude_i) + ",  \"lon\": " + std::to_string(pos.longitude_i) + " } } ]}";
         ws_sendall((uint8_t*)json.c_str(), json.length(), true);
     });
     meshtasticCompact.setOnPositionMessage([](MC_Header& header, MC_Position& pos, bool needReply) {

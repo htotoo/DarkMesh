@@ -3,23 +3,11 @@
 #include <iterator>
 
 uint32_t TMAttack::getRandomTarget() {
-    uint16_t cnt = 0;  // todo handle it in lib better
-    uint32_t srcnode = 0;
-    do {
-        cnt++;
-        auto it = meshtasticCompact->nodeinfo_db.begin();
-        int rnd = esp_random() % NodeInfoDB::MAX_NODES;
-        for (int o = 0; o < rnd; o++) {
-            if (it != meshtasticCompact->nodeinfo_db.end()) {
-                ++it;
-            }
-        }
-        if (it == meshtasticCompact->nodeinfo_db.end()) {
-            return 0;
-        }
-        srcnode = it->node_id;
-    } while (cnt < 100 && srcnode == 0);
-    return srcnode;
+    auto ret = meshtasticCompact->nodeinfo_db.getRandomNode();
+    if (ret) {
+        return ret->node_id;
+    }
+    return 0;
 }
 
 void TMAttack::atkRndPos() {

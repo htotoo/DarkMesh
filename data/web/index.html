@@ -239,8 +239,8 @@
             <label for="lora-preset-selector">LoRa Presets</label>
             <select id="lora-preset-selector">
                 <option value="long_fast">LongFast (Default)</option>
+                <option value="long_moderate">LongModerate</option>
                 <option value="long_slow">LongSlow</option>
-                <option value="very_long_slow">VeryLongSlow</option>
                 <option value="medium_slow">MediumSlow</option>
                 <option value="medium_fast">MediumFast</option>
                 <option value="short_slow">ShortSlow</option>
@@ -366,11 +366,11 @@
 
             const loraPresets = {
                 'long_fast': { bw: 250.0, sf: 11, cr: 5 },
-                'long_slow': { bw: 125.0, sf: 12, cr: 5 },
-                'very_long_slow': { bw: 31.25, sf: 12, cr: 8 },
-                'medium_slow': { bw: 250.0, sf: 10, cr: 8 },
-                'medium_fast': { bw: 250.0, sf: 9, cr: 7 },
-                'short_slow': { bw: 250.0, sf: 8, cr: 7 },
+                'long_slow': { bw: 125.0, sf: 12, cr: 8 },
+                'long_moderate': { bw: 125.0, sf: 11, cr: 8 },
+                'medium_slow': { bw: 250.0, sf: 10, cr: 5 },
+                'medium_fast': { bw: 250.0, sf: 9, cr: 5 },
+                'short_slow': { bw: 250.0, sf: 8, cr: 5 },
                 'short_fast': { bw: 250.0, sf: 7, cr: 5 },
             };
 

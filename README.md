@@ -25,7 +25,6 @@ Open http://192.168.4.1/
 - PKI poision: Advertises the node (selected or random) PKI with a replaced one. Making othesr see the node in red.
 - DDOS: takes down the mesh network making it unusable. Recovers after stopped the attack. (as a side effect new nodes will appear)
 
-> **Disclaimer:**  
-> This project is intended for educational purposes only. Use it exclusively in controlled environments and **only** with explicit permission from all parties involved.  
->  
-> Meshtastic is an excellent open-source project. Please respect its community and users—do not use this tool to cause harm or disrupt any Meshtastic networks.
+> [!IMPORTANT] 
+This project is intended for educational purposes only. Use it exclusively in controlled environments and **only** with explicit permission from all parties involved.  
+Meshtastic is an excellent open-source project. Please respect its community and users—do not use this tool to cause harm or disrupt any Meshtastic networks.

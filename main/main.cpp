@@ -40,6 +40,13 @@ LoraConfig lora_config = {
 };  // default LoRa configuration for EU LONGFAST 433
 MeshtasticCompact meshtasticCompact;
 
+void sendDebugMessage(const std::string& message) {
+    std::string safe_text = message;
+    std::replace(safe_text.begin(), safe_text.end(), '"', '\'');
+    std::string json = "{ \"type\":\"debug\", \"message\":\"" + safe_text + "\" }";
+    ws_sendall((uint8_t*)json.c_str(), json.length(), true);
+}
+
 void app_main(void) {
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
@@ -100,26 +107,22 @@ void app_main(void) {
             snprintf(hexbuf, sizeof(hexbuf), "0x%08" PRIx32, header.srcnode);
             sender = hexbuf;
         }
-        std::string safe_text = message.text;
-        std::replace(safe_text.begin(), safe_text.end(), '"', '\'');
-        std::string json = "{ \"type\": \"debug\",  \"message\": \"" + sender + ": " + std::string(safe_text) + "\" }";
-        ws_sendall((uint8_t*)json.c_str(), json.length(), true);
+        sendDebugMessage("Message from " + sender + ": " + message.text);
+        ESP_LOGI(TAG, "Message from %s: %s", sender.c_str(), message.text.c_str());
     });
     meshtasticCompact.setOnTelemetryDevice([](MC_Header& header, MC_Telemetry_Device& telemetry) {
         ESP_LOGI(TAG, "Telemetry from 0x%08" PRIx32 ": uptime=%" PRIu32 "s, voltage=%.2fV, battery=%lu%%, channel_utilization=%.1f%%",
                  header.srcnode, telemetry.uptime_seconds, telemetry.voltage, telemetry.battery_level, telemetry.channel_utilization);
-        std::string json = "{ \"type\":\"debug\", \"message\":\"Telemetry from 0x" + std::to_string(header.srcnode) + ": uptime=" + std::to_string(telemetry.uptime_seconds) + "s, voltage=" + std::to_string(telemetry.voltage) + "V, battery=" + std::to_string(telemetry.battery_level) + "%, channel_utilization=" + std::to_string(telemetry.channel_utilization) + "%\" }";
-        ws_sendall((uint8_t*)json.c_str(), json.length(), true);
+        sendDebugMessage("Telemetry from 0x" + std::to_string(header.srcnode) + ": uptime=" + std::to_string(telemetry.uptime_seconds) + "s, voltage=" + std::to_string(telemetry.voltage) + "V, battery=" + std::to_string(telemetry.battery_level) + "%, channel_utilization=" + std::to_string(telemetry.channel_utilization) + "%");
     });
     meshtasticCompact.setOnTelemetryEnvironment([](MC_Header& header, MC_Telemetry_Environment& telemetry) {
-        ESP_LOGI(TAG, "Environment from 0x%08" PRIx32 ": temperature=%.2fC, humidity=%.1f%%, pressure=%.1fhPa, lux=%.1f",
+        ESP_LOGI(TAG, "Environment from 0x%08" PRIx32 ": temperature=%.2fC, humidity=%.2f%%, pressure=%.2fhPa, lux=%.2f",
                  header.srcnode, telemetry.temperature, telemetry.humidity, telemetry.pressure, telemetry.lux);
-        std::string json = "{ \"type\":\"debug\", \"message\":\"Environment from 0x" + std::to_string(header.srcnode) + ": temperature=" + std::to_string(telemetry.temperature) + "C, humidity=" + std::to_string(telemetry.humidity) + "%, pressure=" + std::to_string(telemetry.pressure) + "hPa, lux=" + std::to_string(telemetry.lux) + "\" }";
-        ws_sendall((uint8_t*)json.c_str(), json.length(), true);
+        sendDebugMessage("Environment from 0x" + std::to_string(header.srcnode) + ": temperature=" + std::to_string(telemetry.temperature) + "C, humidity=" + std::to_string(telemetry.humidity) + "%, pressure=" + std::to_string(telemetry.pressure) + "hPa, lux=" + std::to_string(telemetry.lux) + "");
     });
     meshtasticCompact.setOnTraceroute([](MC_Header& header, MC_RouteDiscovery& route, bool for_me, bool is_reply, bool need_reply) {
-        std::string json = "{ \"type\":\"debug\", \"message\":\"Traceroute from 0x" + std::to_string(header.srcnode) + ": route_count=" + std::to_string(route.route_count) + ", for_me=" + std::to_string(for_me) + ", is_reply=" + std::to_string(is_reply) + "\" }";
-        ws_sendall((uint8_t*)json.c_str(), json.length(), true);
+        ESP_LOGI(TAG, "Traceroute from 0x%08" PRIx32 ": route_count=%" PRIu16 ", for_me=%d, is_reply=%d", header.srcnode, route.route_count, for_me, is_reply);
+        sendDebugMessage("Traceroute from 0x" + std::to_string(header.srcnode) + ": route_count=" + std::to_string(route.route_count) + ", for_me=" + std::to_string(for_me) + ", is_reply=" + std::to_string(is_reply));
     });
 
     tmAttack.setRadio(&meshtasticCompact);
@@ -223,8 +226,7 @@ void handle_set_config(JSON_Object* params) {
     meshtasticCompact.setRadioSpreadingFactor(static_cast<uint8_t>(sf));
     meshtasticCompact.setRadioCodingRate(static_cast<uint8_t>(cr));
     meshtasticCompact.setRadioPower(static_cast<int8_t>(power));
-    std::string wsmsg = "{\"type\":\"debug\", \"message\":\"Radio configuration updated.\"}";
-    ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
+    sendDebugMessage("Radio configuration updated.");
 }
 
 void handle_stop_attack() {
@@ -239,8 +241,7 @@ void handle_send_message(const char* source_id, const char* message) {
     uint32_t srcnode = getNodeIdFromCh(source_id);
     meshtasticCompact.SendTextMessage(std::string(message), 0xffffffff, 8, MC_MESSAGE_TYPE_TEXT, srcnode);
     ESP_LOGI("WEB", "Sent message with srcnode=0x%08" PRIx32, srcnode);
-    std::string wsmsg = "{\"type\":\"debug\", \"message\":\"Sent message.\"}";
-    ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
+    sendDebugMessage("Sent message.");
 }
 
 void handle_initme() {

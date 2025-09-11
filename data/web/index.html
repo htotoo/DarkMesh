@@ -150,6 +150,12 @@
             display: flex;
         }
 
+        .param-group p {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
         .coord-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -275,6 +281,7 @@
                 seen nodes.</p>
 
             <div id="params-node_flood" class="param-group">
+                <p>Spams new Meshtastic nodes with coordinates too, filling nodedb-s.</p>
                 <div class="coord-grid">
                     <div><label for="flood-min-lat">Min Latitude</label><input type="number" id="flood-min-lat"
                             value="47.0"></div>
@@ -288,6 +295,7 @@
             </div>
 
             <div id="params-name_change" class="param-group">
+                <p>This appends the given string to longname of the selected node / random node. It is not saved.</p>
                 <label for="namechange-target-id">Target Node ID</label>
                 <div class="input-group">
                     <input type="text" id="namechange-target-id" value="!ffffffff">
@@ -298,6 +306,7 @@
             </div>
 
             <div id="params-pos_poison" class="param-group">
+                <p>Randomizes a selected (or randomly selected) node's position.</p>
                 <label for="pospoison-target-id">Target Node ID</label>
                 <div class="input-group">
                     <input type="text" id="pospoison-target-id" value="!ffffffff">
@@ -312,6 +321,8 @@
             </div>
 
             <div id="params-pki_poison" class="param-group">
+                <p>Randomizes a selected (or randomly selected) node's PKI, marking it red in other nodes' list.
+                </p>
                 <label for="pkipoison-target-id">Target Node ID</label>
                 <div class="input-group">
                     <input type="text" id="pkipoison-target-id" value="!ffffffff">

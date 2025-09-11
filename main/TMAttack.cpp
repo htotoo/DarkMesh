@@ -52,20 +52,20 @@ void TMAttack::atkNameChange() {
 
     std::string new_name = node->long_name;
     if (new_name.size() >= emoji.size() && new_name.compare(new_name.size() - emoji.size(), emoji.size(), emoji) == 0) {
-        return;  // it already got that part
+        ;  // it already got that part, so no further rename, but send a new nodeinfo packet about it.
+    } else {
+        if (emoji.length() <= 0) {
+            emoji = "😈";
+        }
+        if (emoji.length() > 30) {
+            emoji = emoji.substr(0, 30);  // limit to 30 bytes
+        }
+        if (new_name.length() + emoji.length() > 38) {
+            new_name = new_name.substr(0, 38 - emoji.length());
+        }
+        new_name += emoji;
+        strncpy(node->long_name, new_name.c_str(), 39);
     }
-
-    if (emoji.length() <= 0) {
-        emoji = "😈";
-    }
-    if (emoji.length() > 30) {
-        emoji = emoji.substr(0, 30);  // limit to 30 bytes
-    }
-    if (new_name.length() + emoji.length() > 38) {
-        new_name = new_name.substr(0, 38 - emoji.length());
-    }
-    new_name += emoji;
-    strncpy(node->long_name, new_name.c_str(), 39);
     node->long_name[39] = '\0';
     meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
     meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);

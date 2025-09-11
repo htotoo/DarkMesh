@@ -48,6 +48,21 @@ void sendDebugMessage(const std::string& message) {
     ESP_LOGI("DEBUG", "%s", message.c_str());
 }
 
+void generateAndSendNodeElementToWs(MC_NodeInfo& nodeinfo) {
+    if (nodeinfo.node_id == 0) return;
+    MC_Position pos;
+    if (!meshtasticCompact.nodeinfo_db.getPosition(nodeinfo.node_id, pos)) {
+        pos.latitude_i = 0;
+        pos.longitude_i = 0;
+    }
+    if (!pos.has_latitude_i || !pos.has_longitude_i) {
+        pos.latitude_i = 0;
+        pos.longitude_i = 0;
+    }
+    std::string json = "{ \"type\": \"node_update\",  \"nodes\": [ { \"id\": \"" + std::string(nodeinfo.id) + "\",  \"ls\": " + std::to_string(nodeinfo.last_updated) + ",  \"name\": \"" + nodeinfo.short_name + "\", \"pos\": { \"lat\": " + std::to_string(pos.latitude_i) + ",  \"lon\": " + std::to_string(pos.longitude_i) + " } } ]}";
+    ws_sendall((uint8_t*)json.c_str(), json.length(), true);
+}
+
 void app_main(void) {
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
@@ -81,29 +96,11 @@ void app_main(void) {
     meshtasticCompact.setStealthMode(true);    // stealth mode, we don't
     meshtasticCompact.setSendEnabled(true);    // we want to send packets
     meshtasticCompact.setOnNodeInfoMessage([](MC_Header& header, MC_NodeInfo& nodeinfo, bool needReply) {
-        MC_Position pos;
-        if (!meshtasticCompact.nodeinfo_db.getPosition(nodeinfo.node_id, pos)) {
-            pos.latitude_i = 0;
-            pos.longitude_i = 0;
-        }
-        if (!pos.has_latitude_i || !pos.has_longitude_i) {
-            pos.latitude_i = 0;
-            pos.longitude_i = 0;
-        }
-        std::string json = "{ \"type\": \"node_update\",  \"nodes\": [ { \"id\": \"" + std::string(nodeinfo.id) + "\",  \"ls\": " + std::to_string(nodeinfo.last_updated) + " ,\"name\": \"" + nodeinfo.short_name + "\", \"pos\": { \"lat\": " + std::to_string(pos.latitude_i) + ",  \"lon\": " + std::to_string(pos.longitude_i) + " } } ]}";
-        ws_sendall((uint8_t*)json.c_str(), json.length(), true);
+        generateAndSendNodeElementToWs(nodeinfo);
     });
     meshtasticCompact.setOnPositionMessage([](MC_Header& header, MC_Position& pos, bool needReply) {
-        if (!pos.has_latitude_i || !pos.has_longitude_i) {
-            return;
-        }
-        meshtasticCompact.nodeinfo_db.getPosition(header.srcnode, pos);
         MC_NodeInfo* nodeinfo = meshtasticCompact.nodeinfo_db.get(header.srcnode);
-        if (!nodeinfo) {
-            return;
-        }
-        std::string json = "{ \"type\": \"node_update\",  \"nodes\": [ { \"id\": \"" + std::string(nodeinfo->id) + "\",  \"name\": \"" + nodeinfo->short_name + "\", \"pos\": { \"lat\": " + std::to_string(pos.latitude_i) + ",  \"lon\": " + std::to_string(pos.longitude_i) + " } } ]}";
-        ws_sendall((uint8_t*)json.c_str(), json.length(), true);
+        if (nodeinfo) generateAndSendNodeElementToWs(*nodeinfo);
     });
     meshtasticCompact.setOnMessage([](MC_Header& header, MC_TextMessage& message) {
         MC_NodeInfo* nodeinfo = meshtasticCompact.nodeinfo_db.get(header.srcnode);
@@ -141,8 +138,8 @@ void app_main(void) {
     while (1) {
         timer++;
         if (timer % 600000 == 0) {
-            meshtasticCompact.SendMyNodeInfo();
-            meshtasticCompact.SendMyPosition();
+            // meshtasticCompact.SendMyNodeInfo();
+            // meshtasticCompact.SendMyPosition();
         }
         tmAttack.loop();
         vTaskDelay(pdMS_TO_TICKS(100));  // wait 100 milliseconds
@@ -252,17 +249,7 @@ void handle_initme() {
         if (!nodeinfo.node_id) {
             continue;
         }
-        MC_Position pos;
-        if (!meshtasticCompact.nodeinfo_db.getPosition(nodeinfo.node_id, pos)) {
-            pos.latitude_i = 0;
-            pos.longitude_i = 0;
-        }
-        if (!pos.has_latitude_i || !pos.has_longitude_i) {
-            pos.latitude_i = 0;
-            pos.longitude_i = 0;
-        }
-        std::string json = "{ \"type\": \"node_update\",  \"nodes\": [ { \"id\": \"" + std::string(nodeinfo.id) + "\",  \"name\": \"" + nodeinfo.short_name + "\", \"pos\": { \"lat\": " + std::to_string(pos.latitude_i) + ",  \"lon\": " + std::to_string(pos.longitude_i) + " } } ]}";
-        ws_sendall((uint8_t*)json.c_str(), json.length(), true);
+        generateAndSendNodeElementToWs(nodeinfo);
         vTaskDelay(pdMS_TO_TICKS(20));  // slight delay to avoid overwhelming the socket
     }
     // send current attack to web

@@ -18,6 +18,12 @@ This project depends on the https://github.com/htotoo/EspMeshtasticCompact you c
 Connect to Wifi: DarkMesh pass: 1234Dark
 Open http://192.168.4.1/
 
+# Attacks
+- Flood with Nodes:  Floods the network with fake nodes, with fake coordinate.
+- Namechange: Can rename a node or an already seen node in others list. Not permanent.
+- Position poision: Fakes the coordinates of a node or an already seen node in others list. Not permanent.
+- PKI poision: Advertises the node (selected or random) PKI with a replaced one. Making othesr see the node in red.
+- DDOS: takes down the mesh network making it unusable. Recovers after stopped the attack. (as a side effect new nodes will appear)
 
 > **Disclaimer:**  
 > This project is intended for educational purposes only. Use it exclusively in controlled environments and **only** with explicit permission from all parties involved.  

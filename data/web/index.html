@@ -444,7 +444,7 @@
                         if (data.nodes && Array.isArray(data.nodes)) {
                             data.nodes.forEach(node => {
                                 if (node.id) {
-                                    node.js_last_seen = node.ls;
+                                    node.js_last_seen = Date.now();
                                     allNodes.set(node.id, node);
                                 }
                             });

@@ -212,6 +212,14 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
         std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"ddos\"}";
         ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
     }
+    if (strcmp(attack_type, "pki_dupe") == 0 && params != NULL) {
+        const char* target_id = json_object_get_string(params, "target_id");
+        ESP_LOGI("WEB", "PKI Duplication Attack Params: target_id=%s", target_id);
+        tmAttack.setTarget(getNodeIdFromCh(target_id));
+        tmAttack.setAttackType(AttackType::PKI_DUPE);
+        std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"pki_dupe\"}";
+        ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
+    }
 }
 
 void handle_set_config(JSON_Object* params) {

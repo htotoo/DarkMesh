@@ -13,6 +13,7 @@ enum class AttackType {
     NAME_CHANGE,
     PKI_POISON,
     DDOS,
+    PKI_DUPE
 };
 
 class TMAttack {
@@ -58,6 +59,8 @@ class TMAttack {
                 return "pki_poison";
             case AttackType::DDOS:
                 return "ddos";
+            case AttackType::PKI_DUPE:
+                return "pki_dupe";
             default:
                 return "Unknown";
         }
@@ -71,6 +74,7 @@ class TMAttack {
     void atkNameChange();
     void atkPkiPoison();
     void atkDdos();
+    void atkPkiDupe();
 
     MeshtasticCompact* meshtasticCompact = nullptr;
     std::string emoji = "😈";

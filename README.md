@@ -6,7 +6,7 @@ This project is intended for educational purposes only. Use it exclusively in co
 Meshtastic is an excellent open-source project. Please respect its community and users—do not use this tool to cause harm or disrupt any Meshtastic networks.
 
 # HW
-It works with Heltec v3 by default. You can rewrite it to run on other platforms too.
+It works with Heltec WSL V3 by default. You can rewrite it to run on other platforms too.
 
 # Contribution
 Feel free to contribute, PRs are welcomed. If you add some features in your fork, please share it with us too.

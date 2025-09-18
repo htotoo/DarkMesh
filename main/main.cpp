@@ -182,7 +182,9 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
         double max_lat = json_object_get_number(params, "max_lat");
         double min_lon = json_object_get_number(params, "min_lon");
         double max_lon = json_object_get_number(params, "max_lon");
+        uint8_t crashclient = (uint8_t)json_object_get_number(params, "crashclient");
         tmAttack.setPosParams(min_lat, max_lat, min_lon, max_lon);
+        tmAttack.setFloodClientCrash(crashclient);
         tmAttack.setAttackType(AttackType::NODE_FLOOD);
         std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"node_flood\"}";
         ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);

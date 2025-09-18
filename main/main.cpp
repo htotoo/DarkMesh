@@ -15,6 +15,7 @@
 #include "MeshtasticCompact.hpp"
 #include "webserver.h"
 #include "TMAttack.hpp"
+#include "settings.hpp"
 
 static const char* TAG = "DarkMesh";
 
@@ -25,16 +26,17 @@ extern "C" {
 void app_main();
 }
 TMAttack tmAttack;
+TConfig config;
 
 Radio_PINS radio_pins = {9, 11, 10, 8, 14, 12, 13};  // Default radio pins for Heltec WSL V3.
 LoraConfig lora_config = {
-    .frequency = 869.25,
-    .bandwidth = 250.0,
-    .spreading_factor = 11,
-    .coding_rate = 5,
+    .frequency = 869.25,     // config
+    .bandwidth = 250.0,      // config
+    .spreading_factor = 11,  // config
+    .coding_rate = 5,        // config
     .sync_word = 0x2b,
     .preamble_length = 16,
-    .output_power = 22,
+    .output_power = 22,  // config
     .tcxo_voltage = 1.8,
     .use_regulator_ldo = false,
 };  // default LoRa configuration for EU LONGFAST 433
@@ -87,6 +89,8 @@ void app_main(void) {
     ESP_LOGI(TAG, "WiFi AP initialized. SSID: %s, Password: %s", ssid, password);
 
     init_httpd();
+    ESP_LOGI(TAG, "Loading radio config.");
+    config.load_radio(lora_config);
 
     ESP_LOGI(TAG, "Radio initializing...");
     meshtasticCompact.RadioInit(RadioType::SX1262, radio_pins, lora_config);
@@ -235,6 +239,12 @@ void handle_set_config(JSON_Object* params) {
     meshtasticCompact.setRadioSpreadingFactor(static_cast<uint8_t>(sf));
     meshtasticCompact.setRadioCodingRate(static_cast<uint8_t>(cr));
     meshtasticCompact.setRadioPower(static_cast<int8_t>(power));
+    lora_config.frequency = frequency;
+    lora_config.bandwidth = bandwidth;
+    lora_config.spreading_factor = static_cast<uint8_t>(sf);
+    lora_config.coding_rate = static_cast<uint8_t>(cr);
+    lora_config.output_power = static_cast<int8_t>(power);
+    config.save_radio(lora_config);
     sendDebugMessage("Radio configuration updated.");
 }
 
@@ -266,5 +276,7 @@ void handle_initme() {
     std::string attack_json = "{ \"type\": \"status_update\", \"current_attack\": \"" + tmAttack.getCurrentAttackTypeString() + "\" }";
     ws_sendall((uint8_t*)attack_json.c_str(), attack_json.length(), true);
     vTaskDelay(pdMS_TO_TICKS(20));
-    // todo send radio config
+    // send radio config
+    std::string config_json = "{ \"type\": \"radio_config\", \"config\": { \"frequency\": " + std::to_string(lora_config.frequency) + ", \"bandwidth\": " + std::to_string(lora_config.bandwidth) + ", \"spreading_factor\": " + std::to_string(lora_config.spreading_factor) + ", \"coding_rate\": " + std::to_string(lora_config.coding_rate) + ", \"power\": " + std::to_string(lora_config.output_power) + " } }";
+    ws_sendall((uint8_t*)config_json.c_str(), config_json.length(), true);
 }

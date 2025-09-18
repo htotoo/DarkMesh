@@ -469,6 +469,16 @@
                     case 'debug':
                         logToDebug(data.message);
                         break;
+                    case 'radio_config':
+                        if (data.config) {
+                            loraPresetSelector.value = 'custom';
+                            document.getElementById('radio-freq').value = data.config.frequency || 869.25;
+                            loraBw.value = data.config.bandwidth || 250.0;
+                            loraSf.value = data.config.spreading_factor || 11;
+                            loraCr.value = data.config.coding_rate || 5;
+                            document.getElementById('radio-power').value = data.config.power || 20;
+                            break;
+                        }
                     default:
                         logToDebug(`Unknown message type: ${data.type}`);
                 }

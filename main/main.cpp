@@ -30,7 +30,7 @@ TConfig config;
 
 Radio_PINS radio_pins = {9, 11, 10, 8, 14, 12, 13};  // Default radio pins for Heltec WSL V3.
 LoraConfig lora_config = {
-    .frequency = 869.25,     // config
+    .frequency = 869.525,    // config
     .bandwidth = 250.0,      // config
     .spreading_factor = 11,  // config
     .coding_rate = 5,        // config

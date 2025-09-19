@@ -241,7 +241,7 @@
         <div class="panel">
             <h2>Radio Configuration</h2>
             <label for="radio-freq">Frequency (MHz)</label>
-            <input type="number" id="radio-freq" value="869.25" step="0.01">
+            <input type="number" id="radio-freq" value="869.525" step="0.01">
             <label for="lora-preset-selector">LoRa Presets</label>
             <select id="lora-preset-selector">
                 <option value="long_fast">LongFast (Default)</option>
@@ -472,7 +472,7 @@
                     case 'radio_config':
                         if (data.config) {
                             loraPresetSelector.value = 'custom';
-                            document.getElementById('radio-freq').value = data.config.frequency || 869.25;
+                            document.getElementById('radio-freq').value = data.config.frequency || 869.525;
                             loraBw.value = data.config.bandwidth || 250.0;
                             loraSf.value = data.config.spreading_factor || 11;
                             loraCr.value = data.config.coding_rate || 5;

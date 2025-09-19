@@ -168,6 +168,14 @@ uint32_t getNodeIdFromCh(const char* source_id) {
 
 void handle_start_attack(const char* attack_type, JSON_Object* params) {
     ESP_LOGI("WEB", "Handling 'start_attack': %s", attack_type);
+    uint32_t ai = 10;
+    if (params != NULL) {
+        ai = (uint32_t)json_object_get_number(params, "attack_interval");
+        if (ai < 10) ai = 10;
+        if (ai > 7200) ai = 7200;
+        tmAttack.setAttackDelay(ai);
+        ESP_LOGI("WEB", "Attack interval set to %u seconds", ai);
+    }
     if (strcmp(attack_type, "pos_poison") == 0 && params != NULL) {
         double min_lat = json_object_get_number(params, "min_lat");
         double max_lat = json_object_get_number(params, "max_lat");

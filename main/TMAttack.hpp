@@ -37,6 +37,11 @@ class TMAttack {
     void setEmoji(const std::string& emoji) {
         this->emoji = emoji;
     }
+
+    void setAttackDelay(uint32_t delaySec) {
+        attackDelay = delaySec * 10;
+    }
+
     void loop();
     void setPosParams(double min_latitude, double max_latitude, double min_longitude, double max_longitude) {
         min_lat = min_latitude;
@@ -86,5 +91,6 @@ class TMAttack {
     uint32_t target = 0xffffffff;   // everybody or flood
     uint8_t flood_clientcrash = 0;  // 0 = no, 1 = yes
     AttackType current_attack = AttackType::NONE;
+    uint32_t attackDelay = 100;  // every 10 seconds
 };
 #endif  // TMATTACK_HPP

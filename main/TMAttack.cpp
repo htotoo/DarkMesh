@@ -195,7 +195,7 @@ void TMAttack::loop() {
         return;  // No attack to perform
     }
     timer++;
-    if (timer < 100) {  // every 10 seconds
+    if (timer < attackDelay) {  // every 10 seconds
         return;
     }
     timer = 0;

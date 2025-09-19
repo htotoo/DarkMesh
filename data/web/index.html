@@ -269,6 +269,10 @@
         <div class="panel">
             <h2>Continuous Attacks</h2>
             <p>Status: <span id="status-value">Idle</span></p>
+
+            <label for="attack-interval">Attack Interval (s)</label>
+            <input type="number" id="attack-interval" min="10" max="7200" value="10" title="The delay between attacks.">
+
             <select id="attack-selector">
                 <option value="none">-- Select Attack --</option>
                 <option value="node_flood">Flood with Nodes</option>
@@ -565,6 +569,8 @@
                     return;
                 }
                 const command = { action: 'start_attack', attack_type: attack, params: {} };
+
+                command.params.interval = parseInt(document.getElementById('attack-interval').value, 10);
 
                 if (attack === 'node_flood') {
                     command.params.min_lat = parseFloat(document.getElementById('flood-min-lat').value);

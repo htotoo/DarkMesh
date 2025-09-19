@@ -174,7 +174,7 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
         if (ai < 10) ai = 10;
         if (ai > 7200) ai = 7200;
         tmAttack.setAttackDelay(ai);
-        ESP_LOGI("WEB", "Attack interval set to %u seconds", ai);
+        ESP_LOGI("WEB", "Attack interval set to %lu seconds", ai);
     }
     if (strcmp(attack_type, "pos_poison") == 0 && params != NULL) {
         double min_lat = json_object_get_number(params, "min_lat");

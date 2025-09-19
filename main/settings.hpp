@@ -24,13 +24,13 @@ class TConfig {
         if (err == ESP_OK) {
             // Parse frequency string
             std::string freq_string(tmpstr);
-            lora_config.frequency = std::stof(freq_string);
+            lora_config.frequency = std::stod(freq_string);
         }
         err = nvs_get_str(handle, "bwstr", tmpstr, &tmpstrlen);
         if (err == ESP_OK) {
             // Parse bandwidth string
             std::string bw_string(tmpstr);
-            lora_config.bandwidth = std::stof(bw_string);
+            lora_config.bandwidth = std::stod(bw_string);
         }
         err = nvs_get_u8(handle, "sf", &lora_config.spreading_factor);
         if (err != ESP_OK) lora_config.spreading_factor = 11;

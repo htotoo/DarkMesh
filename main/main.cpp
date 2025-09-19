@@ -91,6 +91,7 @@ void app_main(void) {
     init_httpd();
     ESP_LOGI(TAG, "Loading radio config.");
     config.load_radio(lora_config);
+    meshtasticCompact.loadNodeDb();
 
     ESP_LOGI(TAG, "Radio initializing...");
     meshtasticCompact.RadioInit(RadioType::SX1262, radio_pins, lora_config);
@@ -99,8 +100,11 @@ void app_main(void) {
     meshtasticCompact.setSendHopLimit(7);      // max hop limit
     meshtasticCompact.setStealthMode(true);    // stealth mode, we don't
     meshtasticCompact.setSendEnabled(true);    // we want to send packets
-    meshtasticCompact.setOnNodeInfoMessage([](MC_Header& header, MC_NodeInfo& nodeinfo, bool needReply) {
+    meshtasticCompact.setOnNodeInfoMessage([](MC_Header& header, MC_NodeInfo& nodeinfo, bool needReply, bool newNode) {
         generateAndSendNodeElementToWs(nodeinfo);
+        if (newNode) {
+            meshtasticCompact.saveNodeDb();
+        }
     });
     meshtasticCompact.setOnPositionMessage([](MC_Header& header, MC_Position& pos, bool needReply) {
         MC_NodeInfo* nodeinfo = meshtasticCompact.nodeinfo_db.get(header.srcnode);

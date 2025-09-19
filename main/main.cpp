@@ -170,7 +170,7 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
     ESP_LOGI("WEB", "Handling 'start_attack': %s", attack_type);
     uint32_t ai = 10;
     if (params != NULL) {
-        ai = (uint32_t)json_object_get_number(params, "attack_interval");
+        ai = (uint32_t)json_object_get_number(params, "interval");
         if (ai < 10) ai = 10;
         if (ai > 7200) ai = 7200;
         tmAttack.setAttackDelay(ai);

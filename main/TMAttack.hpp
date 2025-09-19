@@ -40,6 +40,7 @@ class TMAttack {
 
     void setAttackDelay(uint32_t delaySec) {
         attackDelay = delaySec * 10;
+        timer = attackDelay + 1;  // trigger immediate attack on next loop
     }
 
     void loop();

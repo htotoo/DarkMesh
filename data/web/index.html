@@ -281,6 +281,7 @@
                 <option value="pki_poison">PKI Poison</option>
                 <option value="pki_dupe">PKI Duplication</option>
                 <option value="ddos">DDoS</option>
+                <option value="waypoint_flood">Waypoint Flood</option>
             </select>
             <p class="note">Note: A Target Node ID of <code>!ffffffff</code> means the attack will cycle through all
                 seen nodes.</p>
@@ -346,6 +347,25 @@
                 <div class="input-group">
                     <input type="text" id="pkidupe-target-id" value="!ffffffff">
                     <button type="button" class="btn-all">All</button>
+                </div>
+            </div>
+
+            <div id="params-waypoint_flood" class="param-group">
+                <p>Floods the network with waypoints from a selected (or randomly selected) node.</p>
+                <label for="waypointflood-target-id">Source Node ID</label>
+                <div class="input-group">
+                    <input type="text" id="waypoint_flood-target-id" value="!ffffffff">
+                    <button type="button" class="btn-all">All</button>
+                </div>
+                <div class="coord-grid">
+                    <div><label for="min-lat">Min Latitude</label><input type="number" id="min-lat" value="47.0"></div>
+                    <div><label for="max-lat">Max Latitude</label><input type="number" id="max-lat" value="48.0"></div>
+                    <div><label for="min-lon">Min Longitude</label><input type="number" id="min-lon" value="18.0"></div>
+                    <div><label for="max-lon">Max Longitude</label><input type="number" id="max-lon" value="20.0"></div>
+                </div>
+                <div class="input-group">
+                    <label for="flood-clientcrash">Crash client on map view</label>
+                    <input type="checkbox" id="flood-clientcrash">
                 </div>
             </div>
 
@@ -591,6 +611,13 @@
                     command.params.target_id = document.getElementById('pkipoison-target-id').value;
                 } else if (attack === 'pki_dupe') {
                     command.params.target_id = document.getElementById('pkidupe-target-id').value;
+                } else if (attack === 'waypoint_flood') {
+                    command.params.target_id = document.getElementById('waypoint_flood-target-id').value;
+                    command.params.min_lat = parseFloat(document.getElementById('min-lat').value);
+                    command.params.max_lat = parseFloat(document.getElementById('max-lat').value);
+                    command.params.min_lon = parseFloat(document.getElementById('min-lon').value);
+                    command.params.max_lon = parseFloat(document.getElementById('max-lon').value);
+                    command.params.crashclient = document.getElementById('flood-clientcrash').checked ? 1 : 0;
                 }
 
                 logToDebug(`▶️ Starting attack: ${attack}`);

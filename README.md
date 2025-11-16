@@ -28,3 +28,4 @@ Open http://192.168.4.1/
 - PKI poision: Advertises the node (selected or random) PKI with a replaced one. Making others see the node in red.
 - PKI doubler: Advertises the node (selected or random) PKI as a new node. Making the owner get alerts about exposed key.
 - DDOS: takes down the mesh network making it unusable. Recovers after stopped the attack. (as a side effect new nodes will appear)
+- Waypoint flood: posts random waypoints to the mesh. It can crash clients when they open the map. This is optional. Works with 2.7.5 clients.

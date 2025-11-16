@@ -12,7 +12,7 @@
 #include "esp_log.h"
 
 #include "esp_random.h"
-#include "MeshtasticCompact.hpp"
+#include "MtCompact.hpp"
 #include "webserver.h"
 #include "TMAttack.hpp"
 #include "settings.hpp"
@@ -30,17 +30,17 @@ TConfig config;
 
 Radio_PINS radio_pins = {9, 11, 10, 8, 14, 12, 13};  // Default radio pins for Heltec WSL V3.
 LoraConfig lora_config = {
-    .frequency = 869.525,    // config
-    .bandwidth = 250.0,      // config
-    .spreading_factor = 11,  // config
-    .coding_rate = 5,        // config
-    .sync_word = 0x2b,
-    .preamble_length = 16,
-    .output_power = 22,  // config
-    .tcxo_voltage = 1.8,
-    .use_regulator_ldo = false,
+    869.525,  // config
+    250.0,    // config
+    11,       // config
+    5,        // config
+    0x2b,
+    16,
+    22,  // config
+    1.8,
+    false,
 };  // default LoRa configuration for EU LONGFAST 433
-MeshtasticCompact meshtasticCompact;
+MtCompact mtCompact;
 
 void sendDebugMessage(const std::string& message) {
     std::string safe_text = message;
@@ -50,10 +50,10 @@ void sendDebugMessage(const std::string& message) {
     ESP_LOGI("DEBUG", "%s", message.c_str());
 }
 
-void generateAndSendNodeElementToWs(MC_NodeInfo& nodeinfo) {
+void generateAndSendNodeElementToWs(MCT_NodeInfo& nodeinfo) {
     if (nodeinfo.node_id == 0) return;
-    MC_Position pos;
-    if (!meshtasticCompact.nodeinfo_db.getPosition(nodeinfo.node_id, pos)) {
+    MCT_Position pos;
+    if (!mtCompact.nodeinfo_db.getPosition(nodeinfo.node_id, pos)) {
         pos.latitude_i = 0;
         pos.longitude_i = 0;
     }
@@ -91,27 +91,32 @@ void app_main(void) {
     init_httpd();
     ESP_LOGI(TAG, "Loading radio config.");
     config.load_radio(lora_config);
-    meshtasticCompact.loadNodeDb();
-    meshtasticCompact.set_ok_to_mqtt(false);
+    mtCompact.loadNodeDb();
+    mtCompact.setOkToMqtt(false);
     ESP_LOGI(TAG, "Radio initializing...");
-    meshtasticCompact.RadioInit(RadioType::SX1262, radio_pins, lora_config);
+    mtCompact.RadioInit(RadioType::SX1262, radio_pins, lora_config);
     ESP_LOGI(TAG, "Radio initialized.");
-    meshtasticCompact.setAutoFullNode(false);  // we don't want to be a full node
-    meshtasticCompact.setSendHopLimit(7);      // max hop limit
-    meshtasticCompact.setStealthMode(true);    // stealth mode, we don't
-    meshtasticCompact.setSendEnabled(true);    // we want to send packets
-    meshtasticCompact.setOnNodeInfoMessage([](MC_Header& header, MC_NodeInfo& nodeinfo, bool needReply, bool newNode) {
+    mtCompact.setAutoFullNode(false);  // we don't want to be a full node
+    mtCompact.setSendHopLimit(7);      // max hop limit
+    mtCompact.setStealthMode(true);    // stealth mode, we don't
+    mtCompact.setSendEnabled(true);    // we want to send packets
+    mtCompact.setOnNodeInfoMessage([](MCT_Header& header, MCT_NodeInfo& nodeinfo, bool needReply, bool newNode) {
         generateAndSendNodeElementToWs(nodeinfo);
         if (newNode) {
-            meshtasticCompact.saveNodeDb();
+            mtCompact.saveNodeDb();
         }
-    });
-    meshtasticCompact.setOnPositionMessage([](MC_Header& header, MC_Position& pos, bool needReply) {
-        MC_NodeInfo* nodeinfo = meshtasticCompact.nodeinfo_db.get(header.srcnode);
+        if (nodeinfo.role == 0) {
+            ESP_LOGI("NODEINFO", "Node 0x%" PRIx32 " is a client, sending message to it.", header.srcnode);
+            std::string msg = std::string(nodeinfo.short_name) + " ! CLIENT-rolen vagy. Ez ha nem szükséges, nem ajánlott, mert rontja a hálózatot. További info: https://meshtastic.creativo.hu";
+            mtCompact.sendTextMessage(msg, header.srcnode, 8, MCT_MESSAGE_TYPE_TEXT, 0xabbababa);
+            
+        } });
+    mtCompact.setOnPositionMessage([](MCT_Header& header, MCT_Position& pos, bool needReply) {
+        MCT_NodeInfo* nodeinfo = mtCompact.nodeinfo_db.get(header.srcnode);
         if (nodeinfo) generateAndSendNodeElementToWs(*nodeinfo);
     });
-    meshtasticCompact.setOnMessage([](MC_Header& header, MC_TextMessage& message) {
-        MC_NodeInfo* nodeinfo = meshtasticCompact.nodeinfo_db.get(header.srcnode);
+    mtCompact.setOnMessage([](MCT_Header& header, MCT_TextMessage& message) {
+        MCT_NodeInfo* nodeinfo = mtCompact.nodeinfo_db.get(header.srcnode);
         std::string sender;
         if (nodeinfo) {
             sender = nodeinfo->short_name;
@@ -122,32 +127,33 @@ void app_main(void) {
         }
         sendDebugMessage("Message from " + sender + ": " + message.text);
     });
-    meshtasticCompact.setOnTelemetryDevice([](MC_Header& header, MC_Telemetry_Device& telemetry) {
+    mtCompact.setOnTelemetryDevice([](MCT_Header& header, MCT_Telemetry_Device& telemetry) {
         sendDebugMessage("Telemetry from 0x" + std::to_string(header.srcnode) + ": uptime=" + std::to_string(telemetry.uptime_seconds) + "s, voltage=" + std::to_string(telemetry.voltage) + "V, battery=" + std::to_string(telemetry.battery_level) + "%, channel_utilization=" + std::to_string(telemetry.channel_utilization) + "%");
     });
-    meshtasticCompact.setOnTelemetryEnvironment([](MC_Header& header, MC_Telemetry_Environment& telemetry) {
+    mtCompact.setOnTelemetryEnvironment([](MCT_Header& header, MCT_Telemetry_Environment& telemetry) {
         sendDebugMessage("Environment from 0x" + std::to_string(header.srcnode) + ": temperature=" + std::to_string(telemetry.temperature) + "C, humidity=" + std::to_string(telemetry.humidity) + "%, pressure=" + std::to_string(telemetry.pressure) + "hPa, lux=" + std::to_string(telemetry.lux) + "");
     });
-    meshtasticCompact.setOnTraceroute([](MC_Header& header, MC_RouteDiscovery& route, bool for_me, bool is_reply, bool need_reply) {
+    mtCompact.setOnTraceroute([](MCT_Header& header, MCT_RouteDiscovery& route, bool for_me, bool is_reply, bool need_reply) {
         sendDebugMessage("Traceroute from 0x" + std::to_string(header.srcnode) + ": route_count=" + std::to_string(route.route_count) + ", for_me=" + std::to_string(for_me) + ", is_reply=" + std::to_string(is_reply));
     });
 
-    tmAttack.setRadio(&meshtasticCompact);
+    tmAttack.setRadio(&mtCompact);
 
-    std::string short_name = "DM";                                                                                                          // short name
-    std::string long_name = "DarkMesh";                                                                                                     // long name
-    MeshtasticCompactHelpers::NodeInfoBuilder(meshtasticCompact.getMyNodeInfo(), esp_random(), short_name, long_name, esp_random() % 105);  // random nodeinfo
-    MeshtasticCompactHelpers::PositionBuilder(meshtasticCompact.my_position,
-                                              -180.0 + static_cast<double>(esp_random()) / UINT32_MAX * 360.0,  // random longitude [-180, 180]
-                                              -90.0 + static_cast<double>(esp_random()) / UINT32_MAX * 180.0,   // random latitude [-90, 90]
-                                              esp_random() % 1000                                               // altitude
+    std::string short_name = "Info";                                                                     // short name
+    std::string long_name = "Hungarian Info Node";                                                       // long name
+    MtCompactHelpers::NodeInfoBuilder(mtCompact.getMyNodeInfo(), 0xabbababa, short_name, long_name, 1);  // random nodeinfo
+    MtCompactHelpers::PositionBuilder(mtCompact.my_position,
+                                      -180.0 + static_cast<double>(esp_random()) / UINT32_MAX * 360.0,  // random longitude [-180, 180]
+                                      -90.0 + static_cast<double>(esp_random()) / UINT32_MAX * 180.0,   // random latitude [-90, 90]
+                                      esp_random() % 1000                                               // altitude
     );
     uint32_t timer = 0;  // 0.1 second timer
+    mtCompact.sendMyNodeInfo();
     while (1) {
         timer++;
         if (timer % 600000 == 0) {
-            // meshtasticCompact.SendMyNodeInfo();
-            // meshtasticCompact.SendMyPosition();
+            mtCompact.sendMyNodeInfo();
+            // mtCompact.sendMyPosition();
         }
         tmAttack.loop();
         vTaskDelay(pdMS_TO_TICKS(100));  // wait 100 milliseconds
@@ -261,11 +267,11 @@ void handle_set_config(JSON_Object* params) {
     double cr = json_object_get_number(params, "coding_rate");
     double power = json_object_get_number(params, "power");
     ESP_LOGI("WEB", "Config: Freq=%.1f, BW=%.1f, SF=%.0f, CR=%.0f, Power=%.0f", frequency, bandwidth, sf, cr, power);
-    meshtasticCompact.setRadioFrequency(frequency);
-    meshtasticCompact.setRadioBandwidth(bandwidth);
-    meshtasticCompact.setRadioSpreadingFactor(static_cast<uint8_t>(sf));
-    meshtasticCompact.setRadioCodingRate(static_cast<uint8_t>(cr));
-    meshtasticCompact.setRadioPower(static_cast<int8_t>(power));
+    mtCompact.setRadioFrequency(frequency);
+    mtCompact.setRadioBandwidth(bandwidth);
+    mtCompact.setRadioSpreadingFactor(static_cast<uint8_t>(sf));
+    mtCompact.setRadioCodingRate(static_cast<uint8_t>(cr));
+    mtCompact.setRadioPower(static_cast<int8_t>(power));
     lora_config.frequency = frequency;
     lora_config.bandwidth = bandwidth;
     lora_config.spreading_factor = static_cast<uint8_t>(sf);
@@ -285,14 +291,14 @@ void handle_stop_attack() {
 void handle_send_message(const char* source_id, const char* message) {
     ESP_LOGI("WEB", "Handling 'send_message' from %s: %s", source_id, message);
     uint32_t srcnode = getNodeIdFromCh(source_id);
-    meshtasticCompact.SendTextMessage(std::string(message), 0xffffffff, 8, MC_MESSAGE_TYPE_TEXT, srcnode);
+    mtCompact.sendTextMessage(std::string(message), 0xffffffff, 8, MCT_MESSAGE_TYPE_TEXT, srcnode);
     sendDebugMessage("Sent message.");
 }
 
 void handle_initme() {
     ESP_LOGI("WEB", "Handling 'initme'");
     // sending all nodes to web
-    for (auto& nodeinfo : meshtasticCompact.nodeinfo_db) {
+    for (auto& nodeinfo : mtCompact.nodeinfo_db) {
         if (!nodeinfo.node_id) {
             continue;
         }

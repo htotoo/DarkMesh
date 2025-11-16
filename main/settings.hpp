@@ -3,7 +3,7 @@
 #include <string>
 #include <nvs_flash.h>
 #include <nvs.h>
-#include "MeshasticCompactStructs.hpp"
+#include "MtCompactStructs.hpp"
 
 class TConfig {
    public:

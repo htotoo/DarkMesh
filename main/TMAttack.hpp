@@ -2,7 +2,7 @@
 #define TMATTACK_HPP
 
 #include <string>
-#include "MeshtasticCompact.hpp"
+#include "MtCompact.hpp"
 #include "esp_random.h"
 #include "esp_log.h"
 
@@ -19,8 +19,8 @@ enum class AttackType {
 
 class TMAttack {
    public:
-    void setRadio(MeshtasticCompact* radio) {
-        meshtasticCompact = radio;
+    void setRadio(MtCompact* radio) {
+        mtCompact = radio;
     }
 
     void setTarget(uint32_t target) {
@@ -86,7 +86,7 @@ class TMAttack {
     void atkPkiDupe();
     void atkWaypointFlood();
 
-    MeshtasticCompact* meshtasticCompact = nullptr;
+    MtCompact* mtCompact = nullptr;
     std::string emoji = "😈";
     double min_lat = -90.0;
     double max_lat = 90.0;

@@ -291,7 +291,7 @@ void handle_stop_attack() {
 void handle_send_message(const char* source_id, const char* message) {
     ESP_LOGI("WEB", "Handling 'send_message' from %s: %s", source_id, message);
     uint32_t srcnode = getNodeIdFromCh(source_id);
-    mtCompact.sendTextMessage(std::string(message), 0xffffffff, 8, MCT_MESSAGE_TYPE_TEXT, srcnode);
+    mtCompact.sendTextMessage(std::string(message), 0xffffffff, 8, MCT_MESSAGE_TYPE_TEXT, srcnode, 0, false, 1);
     sendDebugMessage("Sent message.");
 }
 

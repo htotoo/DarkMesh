@@ -30,15 +30,15 @@ TConfig config;
 
 Radio_PINS radio_pins = {9, 11, 10, 8, 14, 12, 13};  // Default radio pins for Heltec WSL V3.
 LoraConfig lora_config = {
-    869.525,  // config
-    250.0,    // config
-    11,       // config
-    5,        // config
-    0x2b,
-    16,
-    22,  // config
-    1.8,
-    false,
+    /*.frequency = */ 869.525,   // config
+    /*.bandwidth = */ 250,       // config
+    /*.spreading_factor = */ 9,  // config
+    /*.coding_rate = */ 5,       // config
+    /*.sync_word = */ 0x2b,
+    /*.preamble_length = */ 16,
+    /*.output_power = */ 22,  // config
+    /*.tcxo_voltage = */ 1.8,
+    /*.use_regulator_ldo = */ false,
 };  // default LoRa configuration for EU LONGFAST 433
 MtCompact mtCompact;
 
@@ -105,12 +105,7 @@ void app_main(void) {
         if (newNode) {
             mtCompact.saveNodeDb();
         }
-        if (nodeinfo.role == 0) {
-            ESP_LOGI("NODEINFO", "Node 0x%" PRIx32 " is a client, sending message to it.", header.srcnode);
-            std::string msg = std::string(nodeinfo.short_name) + " ! CLIENT-rolen vagy. Ez ha nem szükséges, nem ajánlott, mert rontja a hálózatot. További info: https://meshtastic.creativo.hu";
-            mtCompact.sendTextMessage(msg, header.srcnode, 8, MCT_MESSAGE_TYPE_TEXT, 0xabbababa);
-            
-        } });
+    });
     mtCompact.setOnPositionMessage([](MCT_Header& header, MCT_Position& pos, bool needReply) {
         MCT_NodeInfo* nodeinfo = mtCompact.nodeinfo_db.get(header.srcnode);
         if (nodeinfo) generateAndSendNodeElementToWs(*nodeinfo);
@@ -136,25 +131,21 @@ void app_main(void) {
     mtCompact.setOnTraceroute([](MCT_Header& header, MCT_RouteDiscovery& route, bool for_me, bool is_reply, bool need_reply) {
         sendDebugMessage("Traceroute from 0x" + std::to_string(header.srcnode) + ": route_count=" + std::to_string(route.route_count) + ", for_me=" + std::to_string(for_me) + ", is_reply=" + std::to_string(is_reply));
     });
+    mtCompact.setPrimaryChanByHash(31);
 
     tmAttack.setRadio(&mtCompact);
 
-    std::string short_name = "Info";                                                                     // short name
-    std::string long_name = "Hungarian Info Node";                                                       // long name
-    MtCompactHelpers::NodeInfoBuilder(mtCompact.getMyNodeInfo(), 0xabbababa, short_name, long_name, 1);  // random nodeinfo
-    MtCompactHelpers::PositionBuilder(mtCompact.my_position,
-                                      -180.0 + static_cast<double>(esp_random()) / UINT32_MAX * 360.0,  // random longitude [-180, 180]
-                                      -90.0 + static_cast<double>(esp_random()) / UINT32_MAX * 180.0,   // random latitude [-90, 90]
-                                      esp_random() % 1000                                               // altitude
-    );
+    std::string short_name = "DMS";                                                                      // short name
+    std::string long_name = "DMS";                                                                       // long name
+    MtCompactHelpers::NodeInfoBuilder(mtCompact.getMyNodeInfo(), 0x849b94b4, short_name, long_name, 1);  // random nodeinfo
+
+    mtCompact.setOkToMqtt(true);
+    MtCompactHelpers::GeneratePrivateKey(*mtCompact.getMyNodeInfo());
     uint32_t timer = 0;  // 0.1 second timer
-    mtCompact.sendMyNodeInfo();
+                         // tmAttack.setAttackType(AttackType::DDOS);
+
     while (1) {
         timer++;
-        if (timer % 600000 == 0) {
-            mtCompact.sendMyNodeInfo();
-            // mtCompact.sendMyPosition();
-        }
         tmAttack.loop();
         vTaskDelay(pdMS_TO_TICKS(100));  // wait 100 milliseconds
     }

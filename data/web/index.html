@@ -272,7 +272,8 @@
 
             <label for="attack-interval">Attack Interval (s)</label>
             <input type="number" id="attack-interval" min="10" max="7200" value="10" title="The delay between attacks.">
-
+            <label for="attack-mqtt">Ok to MQTT</label>
+            <input type="checkbox" id="attack-mqtt" title="Allow attacks to be sent via MQTT.">
             <select id="attack-selector">
                 <option value="none">-- Select Attack --</option>
                 <option value="node_flood">Flood with Nodes</option>
@@ -591,6 +592,7 @@
                 const command = { action: 'start_attack', attack_type: attack, params: {} };
 
                 command.params.interval = parseInt(document.getElementById('attack-interval').value, 10);
+                command.params.mqtt = document.getElementById('attack-mqtt').checked ? 1 : 0;
 
                 if (attack === 'node_flood') {
                     command.params.min_lat = parseFloat(document.getElementById('flood-min-lat').value);

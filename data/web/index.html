@@ -419,13 +419,13 @@
             const allNodes = new Map();
 
             const loraPresets = {
-                'long_fast': { bw: 250.0, sf: 11, cr: 5 },
-                'long_slow': { bw: 125.0, sf: 12, cr: 8 },
-                'long_moderate': { bw: 125.0, sf: 11, cr: 8 },
-                'medium_slow': { bw: 250.0, sf: 10, cr: 5 },
-                'medium_fast': { bw: 250.0, sf: 9, cr: 5 },
-                'short_slow': { bw: 250.0, sf: 8, cr: 5 },
-                'short_fast': { bw: 250.0, sf: 7, cr: 5 },
+                'long_fast': { bw: 250.0, sf: 11, cr: 5, chanhash: 8 },
+                'long_slow': { bw: 125.0, sf: 12, cr: 8, chanhash: 8 },
+                'long_moderate': { bw: 125.0, sf: 11, cr: 8, chanhash: 8 },
+                'medium_slow': { bw: 250.0, sf: 10, cr: 5, chanhash: 8 },
+                'medium_fast': { bw: 250.0, sf: 9, cr: 5, chanhash: 31 },
+                'short_slow': { bw: 250.0, sf: 8, cr: 5, chanhash: 8 },
+                'short_fast': { bw: 250.0, sf: 7, cr: 5, chanhash: 8 },
             };
 
             const statusValue = document.getElementById('status-value');

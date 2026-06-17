@@ -268,6 +268,19 @@
             <button id="apply-config-btn">Apply Configuration</button>
         </div>
 
+
+        <div class="panel">
+            <h2>WiFi STA Configuration</h2>
+
+            <label for="wifi-ssid">SSID</label>
+            <input type="text" id="wifi-ssid" placeholder="Enter WiFi SSID">
+
+            <label for="wifi-password">Password</label>
+            <input type="password" id="wifi-password" placeholder="Enter WiFi password">
+
+            <button id="save-wifi-btn">Save WiFi Configuration</button>
+        </div>
+
         <div class="panel">
             <h2>Continuous Attacks</h2>
             <p>Status: <span id="status-value">Idle</span></p>
@@ -436,6 +449,7 @@
             const stopAttackBtn = document.getElementById('stop-attack-btn');
             const sendMessageBtn = document.getElementById('send-message-btn');
             const applyConfigBtn = document.getElementById('apply-config-btn');
+            const saveWifiBtn = document.getElementById('save-wifi-btn');
             const loraPresetSelector = document.getElementById('lora-preset-selector');
             const loraBw = document.getElementById('lora-bw');
             const loraSf = document.getElementById('lora-sf');
@@ -508,6 +522,12 @@
                             document.getElementById('radio-power').value = data.config.power || 20;
                             break;
                         }
+                    case 'wifi_sta_config':
+                        if (data.config) {
+                            document.getElementById('wifi-ssid').value = data.config.ssid || '';
+                            document.getElementById('wifi-password').value = data.config.password || '';
+                        }
+                        break;
                     default:
                         logToDebug(`Unknown message type: ${data.type}`);
                 }
@@ -570,6 +590,7 @@
                     loraBw.value = values.bw;
                     loraSf.value = values.sf;
                     loraCr.value = values.cr;
+                    document.getElementById('radio-chanhash').value = values.chanhash;
                 }
             });
 
@@ -660,6 +681,27 @@
                 };
                 logToDebug(`⚙️ Applying new radio configuration...`);
                 sendWebSocketMessage(config);
+            });
+
+
+            saveWifiBtn.addEventListener('click', () => {
+                const ssid = document.getElementById('wifi-ssid').value.trim();
+                const password = document.getElementById('wifi-password').value;
+
+                if (!ssid) {
+                    alert('SSID cannot be empty.');
+                    return;
+                }
+
+                logToDebug(`📶 Saving WiFi STA configuration for "${ssid}"...`);
+
+                sendWebSocketMessage({
+                    action: 'set_wifi_sta',
+                    params: {
+                        ssid,
+                        password
+                    }
+                });
             });
 
             nodeListBody.addEventListener('click', (e) => {

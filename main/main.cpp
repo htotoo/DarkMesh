@@ -10,6 +10,7 @@
 #include "esp_event.h"
 #include "nvs_flash.h"
 #include "esp_log.h"
+#include "mdns.h"
 
 #include "esp_random.h"
 #include "MtCompact.hpp"
@@ -43,6 +44,25 @@ LoraConfig lora_config = {
 uint8_t default_chanhash = 8;
 MtCompact mtCompact;
 
+void initialize_mdns(void) {
+    esp_err_t err = mdns_init();
+    if (err) {
+        ESP_LOGE(TAG, "mDNS initialization failed: %s", esp_err_to_name(err));
+        return;
+    }
+    // Set the hostname -> Resolves to "darkmesh.local"
+    mdns_hostname_set("darkmesh");
+    mdns_instance_name_set("Darkmesh Network Node");
+    ESP_LOGI(TAG, "mDNS initialized. You can now ping darkmesh.local");
+}
+static void mdns_ip_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
+    if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ESP_LOGI("mdns_hook", "Network is ready. Starting mDNS...");
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*)event_data;
+        ESP_LOGI("mdns_hook", "STA IP is: " IPSTR, IP2STR(&event->ip_info.ip));
+        initialize_mdns();
+    }
+}
 void sendDebugMessage(const std::string& message) {
     std::string safe_text = message;
     std::replace(safe_text.begin(), safe_text.end(), '"', '\'');
@@ -71,23 +91,45 @@ void app_main(void) {
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_ap();
-
+    esp_event_handler_instance_register(IP_EVENT,
+                                        IP_EVENT_STA_GOT_IP,
+                                        &mdns_ip_event_handler,
+                                        NULL,
+                                        NULL);
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    wifi_config_t wifi_config = {};
-    strcpy((char*)wifi_config.ap.ssid, ssid);
-    wifi_config.ap.ssid_len = strlen(ssid);
-    strcpy((char*)wifi_config.ap.password, password);
-    wifi_config.ap.max_connection = 4;
-    wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
-    if (strlen(password) == 0) {
-        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+    wifi_config_t ap_config = {};
+    strcpy((char*)ap_config.ap.ssid, ssid);
+    ap_config.ap.ssid_len = strlen(ssid);
+    strcpy((char*)ap_config.ap.password, password);
+    ap_config.ap.max_connection = 4;
+    ap_config.ap.authmode = (strlen(password) == 0) ? WIFI_AUTH_OPEN : WIFI_AUTH_WPA_WPA2_PSK;
+
+    bool wifi_sta = config.load_wifi();
+
+    if (wifi_sta) {
+        ESP_LOGI(TAG, "WiFi STA mode enabled. Target SSID: %s", config.sta_ssid.c_str());
+        esp_netif_create_default_wifi_sta();
+        wifi_config_t sta_config = {};
+        strcpy((char*)sta_config.sta.ssid, config.sta_ssid.c_str());
+        strcpy((char*)sta_config.sta.password, config.sta_password.c_str());
+
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
+    } else {
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
     }
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
+
     ESP_ERROR_CHECK(esp_wifi_start());
-    ESP_LOGI(TAG, "WiFi AP initialized. SSID: %s, Password: %s", ssid, password);
+    ESP_LOGI(TAG, "WiFi hardware started.");
+
+    if (wifi_sta) {
+        ESP_ERROR_CHECK(esp_wifi_connect());
+        ESP_LOGI(TAG, "Connecting to AP...");
+    }
 
     init_httpd();
     ESP_LOGI(TAG, "Loading radio config.");
@@ -297,6 +339,15 @@ void handle_send_message(const char* source_id, const char* message) {
     sendDebugMessage("Sent message.");
 }
 
+void handle_set_wifi_sta(const char* ssid, const char* password, int channel) {
+    ESP_LOGI("WEB", "Handling 'set_wifi_sta': SSID=%s, Password=%s, Channel=%d", ssid, password, channel);
+    config.sta_ssid = ssid;
+    config.sta_password = password;
+    config.channel = channel;
+    config.save_wifi();
+    sendDebugMessage("WiFi STA configuration updated. Restart to apply changes.");
+}
+
 void handle_initme() {
     ESP_LOGI("WEB", "Handling 'initme'");
     // sending all nodes to web
@@ -314,4 +365,8 @@ void handle_initme() {
     // send radio config
     std::string config_json = "{ \"type\": \"radio_config\",  \"config\": { \"frequency\": " + std::to_string(lora_config.frequency) + ", \"bandwidth\": " + std::to_string(lora_config.bandwidth) + ", \"spreading_factor\": " + std::to_string(lora_config.spreading_factor) + ", \"coding_rate\": " + std::to_string(lora_config.coding_rate) + ", \"power\": " + std::to_string(lora_config.output_power) + ", \"chanhash\": " + std::to_string(default_chanhash) + " } }";
     ws_sendall((uint8_t*)config_json.c_str(), config_json.length(), true);
+    vTaskDelay(pdMS_TO_TICKS(20));
+    // send wifi config
+    std::string wifi_json = "{ \"type\": \"wifi_sta_config\",  \"config\": { \"ssid\": \"" + config.sta_ssid + "\", \"password\": \"" + config.sta_password + "\" } }";
+    ws_sendall((uint8_t*)wifi_json.c_str(), wifi_json.length(), true);
 }

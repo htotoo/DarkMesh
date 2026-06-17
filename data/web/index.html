@@ -263,6 +263,8 @@
             </div>
             <label for="radio-power">Output Power (dBm)</label>
             <input type="number" id="radio-power" value="22" min="2" max="22">
+            <label for="radio-chanhash">Channel Hash</label>
+            <input type="number" id="radio-chanhash" value="8" min="0" max="255">
             <button id="apply-config-btn">Apply Configuration</button>
         </div>
 
@@ -274,6 +276,7 @@
             <input type="number" id="attack-interval" min="10" max="7200" value="10" title="The delay between attacks.">
             <label for="attack-mqtt">Ok to MQTT</label>
             <input type="checkbox" id="attack-mqtt" title="Allow attacks to be sent via MQTT.">
+
             <select id="attack-selector">
                 <option value="none">-- Select Attack --</option>
                 <option value="node_flood">Flood with Nodes</option>
@@ -501,6 +504,7 @@
                             loraBw.value = data.config.bandwidth || 250.0;
                             loraSf.value = data.config.spreading_factor || 11;
                             loraCr.value = data.config.coding_rate || 5;
+                            document.getElementById('radio-chanhash').value = data.config.chanhash || 8;
                             document.getElementById('radio-power').value = data.config.power || 20;
                             break;
                         }
@@ -650,7 +654,8 @@
                         bandwidth: parseFloat(loraBw.value),
                         spreading_factor: parseInt(loraSf.value),
                         coding_rate: parseInt(loraCr.value),
-                        power: parseInt(document.getElementById('radio-power').value)
+                        power: parseInt(document.getElementById('radio-power').value),
+                        chanhash: parseInt(document.getElementById('radio-chanhash').value)
                     }
                 };
                 logToDebug(`⚙️ Applying new radio configuration...`);

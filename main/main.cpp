@@ -40,8 +40,8 @@ LoraConfig lora_config = {
     /*.tcxo_voltage = */ 1.8,
     /*.use_regulator_ldo = */ false,
 };  // default LoRa configuration for EU LONGFAST 433
+uint8_t default_chanhash = 8;
 MtCompact mtCompact;
-uint16_t default_chan_hash = 31;  // 8 = long_fast, 31 = medium fast
 
 void sendDebugMessage(const std::string& message) {
     std::string safe_text = message;
@@ -132,7 +132,7 @@ void app_main(void) {
     mtCompact.setOnTraceroute([](MCT_Header& header, MCT_RouteDiscovery& route, bool for_me, bool is_reply, bool need_reply) {
         sendDebugMessage("Traceroute from 0x" + std::to_string(header.srcnode) + ": route_count=" + std::to_string(route.route_count) + ", for_me=" + std::to_string(for_me) + ", is_reply=" + std::to_string(is_reply));
     });
-    mtCompact.setPrimaryChanByHash(default_chan_hash);
+    mtCompact.setPrimaryChanByHash(default_chanhash);  // should be a saved parameter
 
     tmAttack.setRadio(&mtCompact);
 
@@ -176,6 +176,10 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
         int mqtt = (int)json_object_get_number(params, "mqtt");
         mtCompact.setOkToMqtt(mqtt == 1);
         ESP_LOGI("WEB", "Attack MQTT sending set to %s", mqtt == 1 ? "enabled" : "disabled");
+        uint8_t chanhash = (uint8_t)json_object_get_number(params, "chanhash");
+
+        mtCompact.setPrimaryChanByHash(chanhash);
+        ESP_LOGI("WEB", "Attack channel set to hash %d", chanhash);
     }
     if (strcmp(attack_type, "pos_poison") == 0 && params != NULL) {
         double min_lat = json_object_get_number(params, "min_lat");
@@ -261,12 +265,15 @@ void handle_set_config(JSON_Object* params) {
     double sf = json_object_get_number(params, "spreading_factor");
     double cr = json_object_get_number(params, "coding_rate");
     double power = json_object_get_number(params, "power");
+    uint8_t chanhash = (uint8_t)json_object_get_number(params, "chanhash");
     ESP_LOGI("WEB", "Config: Freq=%.1f, BW=%.1f, SF=%.0f, CR=%.0f, Power=%.0f", frequency, bandwidth, sf, cr, power);
     mtCompact.setRadioFrequency(frequency);
     mtCompact.setRadioBandwidth(bandwidth);
     mtCompact.setRadioSpreadingFactor(static_cast<uint8_t>(sf));
     mtCompact.setRadioCodingRate(static_cast<uint8_t>(cr));
     mtCompact.setRadioPower(static_cast<int8_t>(power));
+    mtCompact.setPrimaryChanByHash(chanhash);
+    default_chanhash = chanhash;
     lora_config.frequency = frequency;
     lora_config.bandwidth = bandwidth;
     lora_config.spreading_factor = static_cast<uint8_t>(sf);
@@ -305,6 +312,6 @@ void handle_initme() {
     ws_sendall((uint8_t*)attack_json.c_str(), attack_json.length(), true);
     vTaskDelay(pdMS_TO_TICKS(20));
     // send radio config
-    std::string config_json = "{ \"type\": \"radio_config\", \"config\": { \"frequency\": " + std::to_string(lora_config.frequency) + ", \"bandwidth\": " + std::to_string(lora_config.bandwidth) + ", \"spreading_factor\": " + std::to_string(lora_config.spreading_factor) + ", \"coding_rate\": " + std::to_string(lora_config.coding_rate) + ", \"power\": " + std::to_string(lora_config.output_power) + " } }";
+    std::string config_json = "{ \"type\": \"radio_config\",  \"config\": { \"frequency\": " + std::to_string(lora_config.frequency) + ", \"bandwidth\": " + std::to_string(lora_config.bandwidth) + ", \"spreading_factor\": " + std::to_string(lora_config.spreading_factor) + ", \"coding_rate\": " + std::to_string(lora_config.coding_rate) + ", \"power\": " + std::to_string(lora_config.output_power) + ", \"chanhash\": " + std::to_string(default_chanhash) + " } }";
     ws_sendall((uint8_t*)config_json.c_str(), config_json.length(), true);
 }

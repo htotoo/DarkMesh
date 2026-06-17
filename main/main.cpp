@@ -10,6 +10,7 @@
 #include "esp_event.h"
 #include "nvs_flash.h"
 #include "esp_log.h"
+#include "mdns.h"
 
 #include "esp_random.h"
 #include "MtCompact.hpp"
@@ -40,9 +41,28 @@ LoraConfig lora_config = {
     /*.tcxo_voltage = */ 1.8,
     /*.use_regulator_ldo = */ false,
 };  // default LoRa configuration for EU LONGFAST 433
+uint8_t default_chanhash = 8;
 MtCompact mtCompact;
-uint16_t default_chan_hash = 31;  // 8 = long_fast, 31 = medium fast
 
+void initialize_mdns(void) {
+    esp_err_t err = mdns_init();
+    if (err) {
+        ESP_LOGE(TAG, "mDNS initialization failed: %s", esp_err_to_name(err));
+        return;
+    }
+    // Set the hostname -> Resolves to "darkmesh.local"
+    mdns_hostname_set("darkmesh");
+    mdns_instance_name_set("Darkmesh Network Node");
+    ESP_LOGI(TAG, "mDNS initialized. You can now ping darkmesh.local");
+}
+static void mdns_ip_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
+    if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+        ESP_LOGI("mdns_hook", "Network is ready. Starting mDNS...");
+        ip_event_got_ip_t* event = (ip_event_got_ip_t*)event_data;
+        ESP_LOGI("mdns_hook", "STA IP is: " IPSTR, IP2STR(&event->ip_info.ip));
+        initialize_mdns();
+    }
+}
 void sendDebugMessage(const std::string& message) {
     std::string safe_text = message;
     std::replace(safe_text.begin(), safe_text.end(), '"', '\'');
@@ -71,23 +91,45 @@ void app_main(void) {
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_ap();
-
+    esp_event_handler_instance_register(IP_EVENT,
+                                        IP_EVENT_STA_GOT_IP,
+                                        &mdns_ip_event_handler,
+                                        NULL,
+                                        NULL);
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    wifi_config_t wifi_config = {};
-    strcpy((char*)wifi_config.ap.ssid, ssid);
-    wifi_config.ap.ssid_len = strlen(ssid);
-    strcpy((char*)wifi_config.ap.password, password);
-    wifi_config.ap.max_connection = 4;
-    wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
-    if (strlen(password) == 0) {
-        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+    wifi_config_t ap_config = {};
+    strcpy((char*)ap_config.ap.ssid, ssid);
+    ap_config.ap.ssid_len = strlen(ssid);
+    strcpy((char*)ap_config.ap.password, password);
+    ap_config.ap.max_connection = 4;
+    ap_config.ap.authmode = (strlen(password) == 0) ? WIFI_AUTH_OPEN : WIFI_AUTH_WPA_WPA2_PSK;
+
+    bool wifi_sta = config.load_wifi();
+
+    if (wifi_sta) {
+        ESP_LOGI(TAG, "WiFi STA mode enabled. Target SSID: %s", config.sta_ssid.c_str());
+        esp_netif_create_default_wifi_sta();
+        wifi_config_t sta_config = {};
+        strcpy((char*)sta_config.sta.ssid, config.sta_ssid.c_str());
+        strcpy((char*)sta_config.sta.password, config.sta_password.c_str());
+
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
+    } else {
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
     }
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
+
     ESP_ERROR_CHECK(esp_wifi_start());
-    ESP_LOGI(TAG, "WiFi AP initialized. SSID: %s, Password: %s", ssid, password);
+    ESP_LOGI(TAG, "WiFi hardware started.");
+
+    if (wifi_sta) {
+        ESP_ERROR_CHECK(esp_wifi_connect());
+        ESP_LOGI(TAG, "Connecting to AP...");
+    }
 
     init_httpd();
     ESP_LOGI(TAG, "Loading radio config.");
@@ -132,7 +174,7 @@ void app_main(void) {
     mtCompact.setOnTraceroute([](MCT_Header& header, MCT_RouteDiscovery& route, bool for_me, bool is_reply, bool need_reply) {
         sendDebugMessage("Traceroute from 0x" + std::to_string(header.srcnode) + ": route_count=" + std::to_string(route.route_count) + ", for_me=" + std::to_string(for_me) + ", is_reply=" + std::to_string(is_reply));
     });
-    mtCompact.setPrimaryChanByHash(default_chan_hash);
+    mtCompact.setPrimaryChanByHash(default_chanhash);  // should be a saved parameter
 
     tmAttack.setRadio(&mtCompact);
 
@@ -176,6 +218,10 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
         int mqtt = (int)json_object_get_number(params, "mqtt");
         mtCompact.setOkToMqtt(mqtt == 1);
         ESP_LOGI("WEB", "Attack MQTT sending set to %s", mqtt == 1 ? "enabled" : "disabled");
+        uint8_t chanhash = (uint8_t)json_object_get_number(params, "chanhash");
+
+        mtCompact.setPrimaryChanByHash(chanhash);
+        ESP_LOGI("WEB", "Attack channel set to hash %d", chanhash);
     }
     if (strcmp(attack_type, "pos_poison") == 0 && params != NULL) {
         double min_lat = json_object_get_number(params, "min_lat");
@@ -261,12 +307,15 @@ void handle_set_config(JSON_Object* params) {
     double sf = json_object_get_number(params, "spreading_factor");
     double cr = json_object_get_number(params, "coding_rate");
     double power = json_object_get_number(params, "power");
+    uint8_t chanhash = (uint8_t)json_object_get_number(params, "chanhash");
     ESP_LOGI("WEB", "Config: Freq=%.1f, BW=%.1f, SF=%.0f, CR=%.0f, Power=%.0f", frequency, bandwidth, sf, cr, power);
     mtCompact.setRadioFrequency(frequency);
     mtCompact.setRadioBandwidth(bandwidth);
     mtCompact.setRadioSpreadingFactor(static_cast<uint8_t>(sf));
     mtCompact.setRadioCodingRate(static_cast<uint8_t>(cr));
     mtCompact.setRadioPower(static_cast<int8_t>(power));
+    mtCompact.setPrimaryChanByHash(chanhash);
+    default_chanhash = chanhash;
     lora_config.frequency = frequency;
     lora_config.bandwidth = bandwidth;
     lora_config.spreading_factor = static_cast<uint8_t>(sf);
@@ -290,6 +339,15 @@ void handle_send_message(const char* source_id, const char* message) {
     sendDebugMessage("Sent message.");
 }
 
+void handle_set_wifi_sta(const char* ssid, const char* password, int channel) {
+    ESP_LOGI("WEB", "Handling 'set_wifi_sta': SSID=%s, Password=%s, Channel=%d", ssid, password, channel);
+    config.sta_ssid = ssid;
+    config.sta_password = password;
+    config.channel = channel;
+    config.save_wifi();
+    sendDebugMessage("WiFi STA configuration updated. Restart to apply changes.");
+}
+
 void handle_initme() {
     ESP_LOGI("WEB", "Handling 'initme'");
     // sending all nodes to web
@@ -305,6 +363,10 @@ void handle_initme() {
     ws_sendall((uint8_t*)attack_json.c_str(), attack_json.length(), true);
     vTaskDelay(pdMS_TO_TICKS(20));
     // send radio config
-    std::string config_json = "{ \"type\": \"radio_config\", \"config\": { \"frequency\": " + std::to_string(lora_config.frequency) + ", \"bandwidth\": " + std::to_string(lora_config.bandwidth) + ", \"spreading_factor\": " + std::to_string(lora_config.spreading_factor) + ", \"coding_rate\": " + std::to_string(lora_config.coding_rate) + ", \"power\": " + std::to_string(lora_config.output_power) + " } }";
+    std::string config_json = "{ \"type\": \"radio_config\",  \"config\": { \"frequency\": " + std::to_string(lora_config.frequency) + ", \"bandwidth\": " + std::to_string(lora_config.bandwidth) + ", \"spreading_factor\": " + std::to_string(lora_config.spreading_factor) + ", \"coding_rate\": " + std::to_string(lora_config.coding_rate) + ", \"power\": " + std::to_string(lora_config.output_power) + ", \"chanhash\": " + std::to_string(default_chanhash) + " } }";
     ws_sendall((uint8_t*)config_json.c_str(), config_json.length(), true);
+    vTaskDelay(pdMS_TO_TICKS(20));
+    // send wifi config
+    std::string wifi_json = "{ \"type\": \"wifi_sta_config\",  \"config\": { \"ssid\": \"" + config.sta_ssid + "\", \"password\": \"" + config.sta_password + "\" } }";
+    ws_sendall((uint8_t*)wifi_json.c_str(), wifi_json.length(), true);
 }

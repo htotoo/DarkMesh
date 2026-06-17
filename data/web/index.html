@@ -263,7 +263,22 @@
             </div>
             <label for="radio-power">Output Power (dBm)</label>
             <input type="number" id="radio-power" value="22" min="2" max="22">
+            <label for="radio-chanhash">Channel Hash</label>
+            <input type="number" id="radio-chanhash" value="8" min="0" max="255">
             <button id="apply-config-btn">Apply Configuration</button>
+        </div>
+
+
+        <div class="panel">
+            <h2>WiFi STA Configuration</h2>
+
+            <label for="wifi-ssid">SSID</label>
+            <input type="text" id="wifi-ssid" placeholder="Enter WiFi SSID">
+
+            <label for="wifi-password">Password</label>
+            <input type="password" id="wifi-password" placeholder="Enter WiFi password">
+
+            <button id="save-wifi-btn">Save WiFi Configuration</button>
         </div>
 
         <div class="panel">
@@ -274,6 +289,7 @@
             <input type="number" id="attack-interval" min="10" max="7200" value="10" title="The delay between attacks.">
             <label for="attack-mqtt">Ok to MQTT</label>
             <input type="checkbox" id="attack-mqtt" title="Allow attacks to be sent via MQTT.">
+
             <select id="attack-selector">
                 <option value="none">-- Select Attack --</option>
                 <option value="node_flood">Flood with Nodes</option>
@@ -416,13 +432,13 @@
             const allNodes = new Map();
 
             const loraPresets = {
-                'long_fast': { bw: 250.0, sf: 11, cr: 5 },
-                'long_slow': { bw: 125.0, sf: 12, cr: 8 },
-                'long_moderate': { bw: 125.0, sf: 11, cr: 8 },
-                'medium_slow': { bw: 250.0, sf: 10, cr: 5 },
-                'medium_fast': { bw: 250.0, sf: 9, cr: 5 },
-                'short_slow': { bw: 250.0, sf: 8, cr: 5 },
-                'short_fast': { bw: 250.0, sf: 7, cr: 5 },
+                'long_fast': { bw: 250.0, sf: 11, cr: 5, chanhash: 8 },
+                'long_slow': { bw: 125.0, sf: 12, cr: 8, chanhash: 8 },
+                'long_moderate': { bw: 125.0, sf: 11, cr: 8, chanhash: 8 },
+                'medium_slow': { bw: 250.0, sf: 10, cr: 5, chanhash: 8 },
+                'medium_fast': { bw: 250.0, sf: 9, cr: 5, chanhash: 31 },
+                'short_slow': { bw: 250.0, sf: 8, cr: 5, chanhash: 8 },
+                'short_fast': { bw: 250.0, sf: 7, cr: 5, chanhash: 8 },
             };
 
             const statusValue = document.getElementById('status-value');
@@ -433,6 +449,7 @@
             const stopAttackBtn = document.getElementById('stop-attack-btn');
             const sendMessageBtn = document.getElementById('send-message-btn');
             const applyConfigBtn = document.getElementById('apply-config-btn');
+            const saveWifiBtn = document.getElementById('save-wifi-btn');
             const loraPresetSelector = document.getElementById('lora-preset-selector');
             const loraBw = document.getElementById('lora-bw');
             const loraSf = document.getElementById('lora-sf');
@@ -501,9 +518,16 @@
                             loraBw.value = data.config.bandwidth || 250.0;
                             loraSf.value = data.config.spreading_factor || 11;
                             loraCr.value = data.config.coding_rate || 5;
+                            document.getElementById('radio-chanhash').value = data.config.chanhash || 8;
                             document.getElementById('radio-power').value = data.config.power || 20;
                             break;
                         }
+                    case 'wifi_sta_config':
+                        if (data.config) {
+                            document.getElementById('wifi-ssid').value = data.config.ssid || '';
+                            document.getElementById('wifi-password').value = data.config.password || '';
+                        }
+                        break;
                     default:
                         logToDebug(`Unknown message type: ${data.type}`);
                 }
@@ -566,6 +590,7 @@
                     loraBw.value = values.bw;
                     loraSf.value = values.sf;
                     loraCr.value = values.cr;
+                    document.getElementById('radio-chanhash').value = values.chanhash;
                 }
             });
 
@@ -650,11 +675,33 @@
                         bandwidth: parseFloat(loraBw.value),
                         spreading_factor: parseInt(loraSf.value),
                         coding_rate: parseInt(loraCr.value),
-                        power: parseInt(document.getElementById('radio-power').value)
+                        power: parseInt(document.getElementById('radio-power').value),
+                        chanhash: parseInt(document.getElementById('radio-chanhash').value)
                     }
                 };
                 logToDebug(`⚙️ Applying new radio configuration...`);
                 sendWebSocketMessage(config);
+            });
+
+
+            saveWifiBtn.addEventListener('click', () => {
+                const ssid = document.getElementById('wifi-ssid').value.trim();
+                const password = document.getElementById('wifi-password').value;
+
+                if (!ssid) {
+                    alert('SSID cannot be empty.');
+                    return;
+                }
+
+                logToDebug(`📶 Saving WiFi STA configuration for "${ssid}"...`);
+
+                sendWebSocketMessage({
+                    action: 'set_wifi_sta',
+                    params: {
+                        ssid,
+                        password
+                    }
+                });
             });
 
             nodeListBody.addEventListener('click', (e) => {

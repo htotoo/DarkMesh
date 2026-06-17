@@ -24,6 +24,7 @@ void handle_stop_attack();
 void handle_send_message(const char* source_id, const char* message);
 void handle_set_config(JSON_Object* params);
 void handle_initme();
+void handle_set_wifi_sta(const char* ssid, const char* password, int channel);
 
 static int hex_to_int(char c) {
     if (c >= '0' && c <= '9') {
@@ -156,6 +157,15 @@ static esp_err_t handle_ws_req(httpd_req_t* req) {
                 }
             } else if (strcmp(action, "initme") == 0) {
                 handle_initme();
+
+            } else if (strcmp(action, "set_wifi_sta") == 0) {
+                JSON_Object* params = json_object_get_object(root_object, "params");
+                const char* ssid = json_object_get_string(params, "ssid");
+                const char* password = json_object_get_string(params, "password");
+                int channel = 1;
+                if (ssid && password) {
+                    handle_set_wifi_sta(ssid, password, channel);
+                }
             } else {
                 ESP_LOGE("WEB", "Unknown action: %s", action);
             }

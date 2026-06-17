@@ -12,7 +12,7 @@ It works with Heltec WSL V3 by default. You can modify it to run on other platfo
 Feel free to contribute, PRs are welcomed. If you add some features in your fork, please share it with us too.
 
 # Compilation
-Clone the project, open it with your ide, and start to compile. Tested with ESP-IDF 5.4.2 in VS Code.
+Clone the project, open it with your ide, and start to compile. Tested with ESP-IDF 5.5.1 in VS Code.
 
 
 This project depends on the https://github.com/htotoo/EspMeshCompact you can contribute to that too!
@@ -20,6 +20,8 @@ This project depends on the https://github.com/htotoo/EspMeshCompact you can con
 # Using
 Connect to Wifi: DarkMesh pass: 1234Dark
 Open http://192.168.4.1/
+
+If you configured your Wifi STA, then you can connect to it in your network with http://darkmesh.local/ url.
 
 # Attacks
 - Flood with Nodes:  Floods the network with fake nodes, with fake coordinate.

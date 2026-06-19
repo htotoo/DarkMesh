@@ -279,6 +279,8 @@
             <input type="password" id="wifi-password" placeholder="Enter WiFi password">
 
             <button id="save-wifi-btn">Save WiFi Configuration</button>
+
+
         </div>
 
         <div class="panel">
@@ -386,6 +388,9 @@
                 </div>
             </div>
 
+            <label for="autostart-attack">Autostart Attack on boot</label>
+            <input type="checkbox" id="autostart-attack" title="Autostart the last selected attack on boot.">
+
             <button id="start-attack-btn">Start Selected Attack</button>
             <button id="stop-attack-btn">Stop Current Attack</button>
         </div>
@@ -447,6 +452,7 @@
             const attackSelector = document.getElementById('attack-selector');
             const startAttackBtn = document.getElementById('start-attack-btn');
             const stopAttackBtn = document.getElementById('stop-attack-btn');
+            const autostartAttack = document.getElementById('autostart-attack');
             const sendMessageBtn = document.getElementById('send-message-btn');
             const applyConfigBtn = document.getElementById('apply-config-btn');
             const saveWifiBtn = document.getElementById('save-wifi-btn');
@@ -492,6 +498,7 @@
                     case 'status_update':
                         const attackName = data.current_attack || 'none';
                         statusValue.textContent = data.current_attack || 'Idle';
+                        autostartAttack.checked = data.autostart_attack || false;
                         if (attackSelector.value !== attackName) {
                             attackSelector.value = attackName;
                             attackSelector.dispatchEvent(new Event('change'));
@@ -618,6 +625,7 @@
 
                 command.params.interval = parseInt(document.getElementById('attack-interval').value, 10);
                 command.params.mqtt = document.getElementById('attack-mqtt').checked ? 1 : 0;
+                command.params.autostart = document.getElementById('autostart-attack').checked ? 1 : 0;
 
                 if (attack === 'node_flood') {
                     command.params.min_lat = parseFloat(document.getElementById('flood-min-lat').value);

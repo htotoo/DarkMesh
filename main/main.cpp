@@ -43,7 +43,7 @@ LoraConfig lora_config = {
 };  // default LoRa configuration for EU LONGFAST 433
 uint8_t default_chanhash = 8;
 MtCompact mtCompact;
-
+void load_attack();
 void initialize_mdns(void) {
     esp_err_t err = mdns_init();
     if (err) {
@@ -185,7 +185,7 @@ void app_main(void) {
     MtCompactHelpers::GeneratePrivateKey(*mtCompact.getMyNodeInfo());
     uint32_t timer = 0;  // 0.1 second timer
                          // tmAttack.setAttackType(AttackType::DDOS);
-
+    load_attack();
     while (1) {
         timer++;
         tmAttack.loop();
@@ -205,6 +205,38 @@ uint32_t getNodeIdFromCh(const char* source_id) {
     return srcnode;
 }
 
+void save_attack_stopped() {
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open("attack_cfg", NVS_READWRITE, &handle);
+    if (err != ESP_OK) return;
+    nvs_set_str(handle, "attack_type", "");
+    nvs_commit(handle);
+    nvs_close(handle);
+}
+
+void save_attack(const char* attack_type, JSON_Object* params) {
+    ESP_LOGI("WEB", "Saving attack configuration: %s", attack_type);
+    bool autostart = json_object_get_number(params, "autostart") == 1;
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open("attack_cfg", NVS_READWRITE, &handle);
+    if (err != ESP_OK) return;
+    nvs_set_str(handle, "attack_type", autostart ? attack_type : "");
+    JSON_Value* params_value = json_object_get_wrapping_value(params);
+    size_t required_size = json_serialization_size(params_value);
+    if (required_size > 0) {
+        uint8_t buffer[1024];
+        if (required_size <= sizeof(buffer)) {
+            json_serialize_to_buffer(params_value, (char*)buffer, sizeof(buffer));
+
+            nvs_set_blob(handle, "params", buffer, required_size);
+        } else {
+            ESP_LOGW("WEB", "JSON parameters too large to save");
+        }
+    }
+    nvs_commit(handle);
+    nvs_close(handle);
+}
+
 void handle_start_attack(const char* attack_type, JSON_Object* params) {
     ESP_LOGI("WEB", "Handling 'start_attack': %s", attack_type);
     uint32_t ai = 10;
@@ -222,6 +254,8 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
 
         mtCompact.setPrimaryChanByHash(chanhash);
         ESP_LOGI("WEB", "Attack channel set to hash %d", chanhash);
+
+        save_attack(attack_type, params);
     }
     if (strcmp(attack_type, "pos_poison") == 0 && params != NULL) {
         double min_lat = json_object_get_number(params, "min_lat");
@@ -300,6 +334,34 @@ void handle_start_attack(const char* attack_type, JSON_Object* params) {
     }
 }
 
+void load_attack() {
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open("attack_cfg", NVS_READONLY, &handle);
+    if (err != ESP_OK) return;
+    char tmpstr[64] = {0};
+    size_t tmpstrlen = sizeof(tmpstr);
+    err = nvs_get_str(handle, "attack_type", tmpstr, &tmpstrlen);
+    if (err != ESP_OK || tmpstrlen <= 2) {
+        nvs_close(handle);
+        return;
+    }
+    uint8_t blob[1024] = {0};
+    size_t blob_size = sizeof(blob);
+    err = nvs_get_blob(handle, "params", blob, &blob_size);
+    if (err != ESP_OK || blob_size == 0) {
+        nvs_close(handle);
+        return;
+    }
+    JSON_Value* root_value = json_parse_string((const char*)blob);
+    if (root_value == NULL) {
+        nvs_close(handle);
+        return;
+    }
+    handle_start_attack(tmpstr, json_value_get_object(root_value));
+    json_value_free(root_value);
+    nvs_close(handle);
+}
+
 void handle_set_config(JSON_Object* params) {
     ESP_LOGI("WEB", "Handling 'set_config'");
     double frequency = json_object_get_number(params, "frequency");
@@ -329,6 +391,7 @@ void handle_stop_attack() {
     tmAttack.setAttackType(AttackType::NONE);
     ESP_LOGI("WEB", "Handling 'stop_attack'");
     std::string wsmsg = "{\"type\":\"status_update\"}";
+    save_attack_stopped();
     ws_sendall((uint8_t*)wsmsg.c_str(), wsmsg.length(), true);
 }
 

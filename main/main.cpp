@@ -166,16 +166,22 @@ void app_main(void) {
         sendDebugMessage("Message from " + sender + ": " + message.text);
     });
     mtCompact.setOnTelemetryDevice([](MCT_Header& header, MCT_Telemetry_Device& telemetry) {
-        sendDebugMessage("Telemetry from 0x" + std::to_string(header.srcnode) + ": uptime=" + std::to_string(telemetry.uptime_seconds) + "s, voltage=" + std::to_string(telemetry.voltage) + "V, battery=" + std::to_string(telemetry.battery_level) + "%, channel_utilization=" + std::to_string(telemetry.channel_utilization) + "%");
+        char hexbuf[11];
+        snprintf(hexbuf, sizeof(hexbuf), "0x%08" PRIx32, header.srcnode);
+        sendDebugMessage("Telemetry from " + std::string(hexbuf) + ": uptime=" + std::to_string(telemetry.uptime_seconds) + "s, voltage=" + std::to_string(telemetry.voltage) + "V, battery=" + std::to_string(telemetry.battery_level) + "%, channel_utilization=" + std::to_string(telemetry.channel_utilization) + "%");
     });
     mtCompact.setOnTelemetryEnvironment([](MCT_Header& header, MCT_Telemetry_Environment& telemetry) {
-        sendDebugMessage("Environment from 0x" + std::to_string(header.srcnode) + ": temperature=" + std::to_string(telemetry.temperature) + "C, humidity=" + std::to_string(telemetry.humidity) + "%, pressure=" + std::to_string(telemetry.pressure) + "hPa, lux=" + std::to_string(telemetry.lux) + "");
+        char hexbuf[11];
+        snprintf(hexbuf, sizeof(hexbuf), "0x%08" PRIx32, header.srcnode);
+        sendDebugMessage("Environment from " + std::string(hexbuf) + ": temperature=" + std::to_string(telemetry.temperature) + "C, humidity=" + std::to_string(telemetry.humidity) + "%, pressure=" + std::to_string(telemetry.pressure) + "hPa, lux=" + std::to_string(telemetry.lux) + "");
     });
     mtCompact.setOnTraceroute([](MCT_Header& header, MCT_RouteDiscovery& route, bool for_me, bool is_reply, bool need_reply) {
-        sendDebugMessage("Traceroute from 0x" + std::to_string(header.srcnode) + ": route_count=" + std::to_string(route.route_count) + ", for_me=" + std::to_string(for_me) + ", is_reply=" + std::to_string(is_reply));
+        char hexbuf[11];
+        snprintf(hexbuf, sizeof(hexbuf), "0x%08" PRIx32, header.srcnode);
+        sendDebugMessage("Traceroute from " + std::string(hexbuf) + ": route_count=" + std::to_string(route.route_count) + ", for_me=" + std::to_string(for_me) + ", is_reply=" + std::to_string(is_reply));
     });
     mtCompact.setPrimaryChanByHash(default_chanhash);  // should be a saved parameter
-
+    mtCompact.setFilterAllOutgoingMessages(true);
     tmAttack.setRadio(&mtCompact);
 
     std::string short_name = "DMS";                                                                      // short name

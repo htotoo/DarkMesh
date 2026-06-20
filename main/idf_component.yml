@@ -1,5 +1,6 @@
 dependencies:
   EspMeshCompact:
     git: https://github.com/htotoo/EspMeshCompact
+    path: EspMeshCompact
   espressif/mdns: 1.*
   
